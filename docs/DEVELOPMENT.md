@@ -1,7 +1,7 @@
 
 # EEDC Development Guide
 
-**Version 3.16.1** | Stand: April 2026
+**Version 3.24.1** | Stand: April 2026
 
 ---
 
