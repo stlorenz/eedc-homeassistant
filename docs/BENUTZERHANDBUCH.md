@@ -1,7 +1,13 @@
 
 # EEDC Benutzerhandbuch
 
-**Version 3.16.1** | Stand: April 2026
+**Version 3.24.1** | Stand: April 2026
+
+---
+
+## Empfohlene Nutzung
+
+eedc ist eine **datendichte Analyse-App** — viele KPIs nebeneinander, feinachsige Charts, Tabellen mit vielen Spalten. Optimal nutzbar auf **Desktop**. Smartphone in Standard-Anzeigegröße funktioniert für Live-Dashboard und einfache Sichten; für die datendichten Auswertungs-Bereiche ist ein größerer Bildschirm sinnvoll. Bei stark erhöhtem Anzeigezoom (iOS „Größerer Text", HA-Companion-Seitenzoom über Standard) können einzelne Layouts eng werden.
 
 ---
 
@@ -39,4 +45,4 @@ Begriffserklärungen und Support-Informationen.
 
 ---
 
-*Letzte Aktualisierung: März 2026*
+*Letzte Aktualisierung: April 2026 (v3.24.1)*
