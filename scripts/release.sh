@@ -116,6 +116,22 @@ if ! grep -q "## \[$VERSION\]" CHANGELOG.md 2>/dev/null; then
     exit 1
 fi
 
+# WAS-IST-NEU.md: Major.Minor-Sektion vorhanden? (Soft-Check, keine Blockade)
+# Bei reinen Bugfix-Releases ohne anwender-sichtbare Änderungen ist das OK,
+# aber der Maintainer soll bewusst entscheiden statt es zu vergessen.
+MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+if ! grep -qE "^## v${MAJOR_MINOR}[. ]" docs/WAS-IST-NEU.md 2>/dev/null; then
+    echo -e "${YELLOW}Warnung: Keine v${MAJOR_MINOR}-Sektion in docs/WAS-IST-NEU.md gefunden.${NC}"
+    echo -e "${YELLOW}  Wenn dieses Release anwender-sichtbare Änderungen enthält, bitte vorher${NC}"
+    echo -e "${YELLOW}  einen ## v${MAJOR_MINOR}.x-Block oben in der Datei ergänzen — die Page wird beim${NC}"
+    echo -e "${YELLOW}  Frontend-Build automatisch synchronisiert. Bei reinem Bugfix kann ignoriert werden.${NC}"
+    read -r -p "  Trotzdem fortfahren? [y/N] " RESP
+    if [ "$RESP" != "y" ] && [ "$RESP" != "Y" ]; then
+        echo -e "${RED}Release abgebrochen.${NC}"
+        exit 1
+    fi
+fi
+
 # Aktuelle Version lesen
 CURRENT=$(grep -oP '(?<=APP_VERSION = ")[^"]*' eedc/backend/core/config.py)
 echo -e "  Aktuell:  ${YELLOW}$CURRENT${NC}"

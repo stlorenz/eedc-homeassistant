@@ -217,3 +217,12 @@ Geräte-Stammdaten (`stamm_*`), Ansprechpartner (`ansprechpartner_*`) und Wartun
 Für Versionen vor v3.16 — siehe [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md) auf GitHub.
 
 Wichtige Meilensteine als Stichworte: Live Dashboard + MQTT-Inbound (v3.0), GTI-Prognose (v3.3), Wettermodell-Kaskade (v3.4), Infothek-Modul Etappe 1 (v3.5), L1/L2-Cache (v3.7), Live-Dashboard-Generalüberholung (v3.9), Import-Strategie (v3.10), Aktueller Monat → Monatsberichte (v3.12), Energieprofil-Monatsauswertung (v3.13), Stilllegungsdatum (v3.14), PDF-Anlagendokumentation + Finanzbericht (v3.15).
+
+---
+
+## Weitere Quellen
+
+- **Vollständiger CHANGELOG (technisch):** [CHANGELOG.md auf GitHub](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md) — alle Bugfixes und Code-Änderungen, auch die nicht-anwender-sichtbaren.
+- **GitHub-Releases:** [supernova1963/eedc-homeassistant/releases](https://github.com/supernova1963/eedc-homeassistant/releases) — versionsweise gebündelt mit Zusammenfassung.
+- **Issues und Discussions:** [supernova1963/eedc-homeassistant](https://github.com/supernova1963/eedc-homeassistant) — Bugs melden, Features anfragen, Diskussionen mitlesen.
+- **Online-Dokumentation:** [supernova1963.github.io/eedc-homeassistant](https://supernova1963.github.io/eedc-homeassistant/) — Web-Variante derselben Hilfe, gut zum Verlinken in Foren.
