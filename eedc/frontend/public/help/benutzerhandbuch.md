@@ -7,7 +7,7 @@
 
 ## Über diese Hilfe
 
-Du liest gerade das **EEDC-Benutzerhandbuch** — die Übersicht über die ganze Dokumentation. Wenn du die Seite über den Hauptmenü-Punkt **Hilfe** geöffnet hast (eingeführt in v3.24.0, Discussion #130), läuft sie als In-App-Hilfe direkt in EEDC: alle Inhalte werden lokal gerendert, ohne externen Browser-Tab und ohne Ingress-Login-Stolpersteine in der HA-Companion-App.
+Du liest gerade das **EEDC-Benutzerhandbuch** — die Übersicht über die ganze Dokumentation. Wenn du die Seite über den Hauptmenü-Punkt **Hilfe** geöffnet hast (eingeführt in v3.24.2, Discussion #130), läuft sie als In-App-Hilfe direkt in EEDC: alle Inhalte werden lokal gerendert, ohne externen Browser-Tab und ohne Ingress-Login-Stolpersteine in der HA-Companion-App.
 
 **Bedienung der Hilfe-Seite:**
 - **Sidebar (Desktop) / Dropdown (Mobile)** links: Auswahl des Dokuments aus drei Kategorien — *Einstieg*, *Handbuch*, *Referenz*.
@@ -64,7 +64,7 @@ Wer mit einer älteren EEDC-Version vertraut ist und einen schnellen Überblick 
 
 | Bereich | Änderung | Ab Version | Wo dokumentiert |
 |---|---|---|---|
-| Hilfe | In-App-Hilfe-Seite (`/hilfe`) mit kuratierter Doku | v3.24.0 | Diese Seite |
+| Hilfe | In-App-Hilfe-Seite (`/hilfe`) mit kuratierter Doku | v3.24.2 | Diese Seite |
 | Aussichten | Neuer Tab **„Prognosen"** (OpenMeteo / EEDC kalibriert / Solcast / IST), MAE+MBE getrennt, Asymmetrie-Diagnostik, Reparatur-Popover bei IST-Lücken | v3.16.4 → v3.23.3 | [Bedienung §7.2](HANDBUCH_BEDIENUNG.md#72-prognosen) |
 | Auswertung | Neuer Tab **„Energieprofil"** (Beta) mit Tagesdetail / Monat (CollapsibleSection, Tage-Tabelle) / Verbrauchsprognose | v3.16.16 → v3.21.0 | [Bedienung §5.8](HANDBUCH_BEDIENUNG.md#58-energieprofil-tab-beta) |
 | Cockpit | Reihenfolge der Sub-Tabs umsortiert (Erzeuger oben, Speicher in der Mitte, Verbraucher unten); WP-KPIs in fester Reihenfolge JAZ → Wärme → Strom → Ersparnis; Anlagenname als h1 | v3.23.4 | [Bedienung §3](HANDBUCH_BEDIENUNG.md#3-cockpit-dashboards) |
