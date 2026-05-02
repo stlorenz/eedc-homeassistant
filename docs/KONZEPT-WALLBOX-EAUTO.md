@@ -122,6 +122,7 @@ BMW i4
 - Sensor-Mapping erweitern für evcc Vehicle-Topics
 - Wallbox-Dashboard liest eigene Daten statt E-Auto-Pool
 - Bestehende `ladung_pv_kwh`/`ladung_netz_kwh` am E-Auto bleiben als Fallback
+- **Daten-Checker-Warnung bei Pool-Pflege-Mismatch:** wenn EAuto + WB beide gepflegt sind und die Werte erkennbar ähnlich (≈ derselbe Stromfluss aus zwei Perspektiven) bzw. beide Felder voll sind aber `WB.ladung_pv_kwh > Σ EAuto.ladung_heim_pv_kwh` ist, INFO/WARNING ausgeben — lenkt den User auf eine bewusste Entscheidung, welche Quelle die Wahrheit liefert. Hintergrund: 2026-05-02 fielen bei Joachim und Gernot inkonsistente Pool-Werte auf (PV-Anteil > 100 %, doppelter `kWh/100km`), Quick-Fix in v3.25.x macht max-Auswahl statt Summe. Die Phase-2-Trennung beseitigt die Doppelzählung strukturell, der Daten-Checker bleibt für Altbestand und Pool-Mode.
 
 ### Phase 3: Aufschlüsselung im Wallbox-Dashboard (optional)
 - Wenn E-Autos Vehicle-Sensoren haben, kann das Wallbox-Dashboard
