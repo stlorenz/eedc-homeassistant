@@ -119,19 +119,24 @@ Winter-IST-Vergleich an drei Anlagen scharfgeschaltet werden.
 beide parallel zur Legacy-Berechnung tracked. O3 als eigenes Issue,
 nach Winter 2026/27.
 
-## Wetter-Stratifizierung (interne EEDC-Diagnose)
+## Wetter-Stratifizierung — Diagnose und Korrektur-Dimension
 
 EEDC-Lernfaktor wird nach Wetter-Klasse (klar / diffus / wechselhaft)
-ausgewertet: zeigt, ob bei bestimmten Wetterlagen systematisch verzerrt
-wird.
+ausgewertet — und die Wetterklasse fließt zusätzlich als eigene
+Bin-Achse in das Korrekturprofil ein (siehe Ziel-Architektur unten).
 
-- Klassifikation pro Tag aus `cloud_cover_mean` + `precipitation_sum`
-  (Logik in [`wetter/utils.py`](../eedc/backend/services/wetter/utils.py)
-  `wetter_symbol_aus_tag` als Inspiration).
-- Pro Klasse: separater MAE/MBE auf den letzten 30/90 Tagen.
+- **Klassifikation pro Stunde** aus `bewoelkung_prozent` +
+  `niederschlag_mm` + `wetter_code`, gespeichert in `TagesEnergieProfil`.
+  Tagesklassifikation als Aggregat: dominante Klasse über die
+  Tageslicht-Stunden, Schwellen siehe Klassifikations-Helper.
+- Logik orientiert sich an der bestehenden
+  [`wetter_symbol_aus_tag`](../eedc/backend/services/wetter/utils.py) —
+  neue Funktion `klassifiziere_stunde()` reduziert auf 3 Klassen.
+- Pro Klasse: separater MAE/MBE auf den letzten 30/90 Tagen,
+  zusätzlich Stratifizierung pro Stunde.
 - **Strikt EEDC-intern** — keine Quellen-Vergleichs-Statistik daneben.
-- Hilft bei der Frage: rechtfertigt sich Variante A (stündliches Profil)
-  oder reicht der Skalar?
+- Doppelfunktion: (1) Diagnose-Sicht im Prognosen-Tab,
+  (2) Bin-Achse in der Korrekturprofil-Tabelle.
 
 ## Prognosen-Tab als Übergangs-Diagnose
 
@@ -148,72 +153,97 @@ Sicht nicht angezeigt — wir vergleichen nicht.
 Evaluierungsphase (eingeführt v3.16.4 als Prognosen-Vergleich-Tab,
 „Evaluierungsphase") ist mit der Verabschiedung des
 [`KONZEPT-PROGNOSEQUELLEN-WAHL.md`](KONZEPT-PROGNOSEQUELLEN-WAHL.md)
-**formell beendet**. Der Tab in seiner heutigen Form (mit Solcast-Spalte,
-Genauigkeits-Tracking, Asymmetrie-Cards) wird auf reine EEDC-Diagnose
-umgestellt — Solcast-Spalte raus, Wetter-Stratifizierung rein.
+**konzept-intern beendet**.
 
-## Varianten A / B / C — technische Optionen, reaktiv
+Die UI-Spalte „Solcast" im Prognosen-Vergleich-Tab bleibt jedoch
+**vorerst stehen** — Tester (insb. Rainer) nutzen sie aktiv zur
+Diagnose, eine eigenmächtige Entfernung wäre Tester-Pakt-Verletzung.
+Die Stratifizierungs-Card und O12-Diagnose-Card werden **additiv**
+neben der bestehenden Tab-Struktur eingeführt. Über das Entfernen
+der Solcast-Spalte wird erst nach Rainer-Rückkopplung entschieden.
 
-Drei Granularitäten für ein anlagenspezifisches Korrekturprofil. Werden
-**nur** umgesetzt, wenn Diagnose-Schwellen aus Wetter-Stratifizierung
-oder konkrete Anfragen es nahelegen — keine kalenderbasierten Trigger
-(„6 Monate warten" gibt's nicht mehr).
+## Ziel-Architektur — Sonnenstand × Wetterklasse (geplant, nicht reaktiv)
 
-### Variante A — Stündliches Korrekturprofil
+Statt mehrerer reaktiv-anrollender Varianten gibt es **eine** geplante
+Ziel-Architektur, auf die wir hinarbeiten:
 
-**Schema:** ein Faktor pro `(saisonbin, stunde)` — z. B. „April × 09:00".
+> **Ein Faktor pro `(azimut_bin, elevation_bin, wetterklasse)` — eine
+> kombinierte mehrdimensionale Tabelle pro Anlage.**
 
-**Aggregation:** `Σ(IST_h) / Σ(Prognose_h)` über alle Tage im Saisonbin
-und gleicher Stunde h. Saisonale Kaskade analog zum Skalar.
+Erfasst Verschattung (über Sonnenstand-Bin) und wetterabhängige
+Asymmetrie (über Wetterklasse) in einem gemeinsamen Bin, sodass die
+Interaktion *„Verschattung wirkt bei klarem Himmel stark, bei diffuser
+Strahlung kaum"* sauber abgebildet ist.
 
-**Anwendung:**
+### Begründung der Achsen-Wahl
 
-- Live-Dashboard: `gti_h = gti_h × faktor_h(monat, h)`
-- Stündliches Profil aus Stundenfaktoren rekonstruiert, Tagessumme = Σ
-  aller h
+**Sonnenstand statt Saisonbin × Stunde:**
+- Physikalisch korrekt — gleicher Sonnenstand = gleiche Verschattung,
+  unabhängig von Datum (April × 09:00 und August × 09:00 haben
+  unterschiedlichen Sonnenstand und damit unterschiedliche Verschattung)
+- Statistisch dichter — mehrere Tage pro Jahr fallen in denselben
+  Sonnenstand-Bin
+- Sensor-Daten dafür kommen von einem neutralen Solar-Position-Helper
+  (`pvlib` oder eigene Astro-Berechnung); keine externe Datenquelle nötig
 
-**Erfasst:** Verschattung im Tagesverlauf (Baum am Ostflügel zu typischen
-Sonnenständen). Deckt 95 % der real auftretenden Verschattung ab.
+**Wetterklasse als eigene Bin-Achse statt multiplikativer Trennung:**
+- Multiplikative Trennung `f_verschattung × f_wetter` setzt Unabhängigkeit
+  der Effekte voraus — die wir empirisch *nicht* haben (Interaktion
+  Verschattung × Wetter)
+- Multiplikative Faktoren sind ohne Bodenwahrheit auch identifizierungs-
+  bedingt ill-posed: aus IST/Prognose lassen sich die Anteile nicht
+  trennen
+- Eine kombinierte Tabelle ist statistisch trivial (einfacher Mittelwert
+  pro Bin) und erfasst Interaktionen exakt
 
-**Aufwand:** mittel. Aggregation (Background-Job), neues Schema (siehe
-Datenmodell), Frontend-Heatmap (24×12) als Diagnose-Sicht.
+### Bin-Auflösung und Sparsity
 
-**Trigger:** Wetter-Stratifizierungs-Daten zeigen systematisches
-Stunden-Bias bei mindestens N Anlagen.
+- Sonnenstand: Auflösung 10° × 10° → 36 × 9 = 324 mögliche Bins, davon
+  in der Praxis ~150–200 belegt (nur halber Himmel relevant, Elevation
+  sinnvoll bis ~70°)
+- Wetterklasse: 3 Klassen (klar / diffus / wechselhaft)
+- Total: ~450–600 Korrektur-Bins pro Anlage
+- Datenpunkte pro Bin: bei 2 Jahren historischen Daten (Backfill aus
+  Open-Meteo Archive) ≈ 30–80 Stunden pro Bin auf Hauptachsen,
+  statistisch robust
 
-### Variante B — Sonnenstand-basiertes Korrekturprofil
+### Fallback-Kaskade bei dünn besetzten Bins
 
-**Schema:** ein Faktor pro `(azimut_bin, elevation_bin)` — z. B.
-„Azimut 110°, Elevation 30°" als Bin (Auflösung 10°×10° = 324 Bins).
+Reicht ein Bin nicht für robusten Faktor (zu wenig Datenpunkte),
+fällt der Aggregator stufenweise zurück:
 
-**Anwendung:** pro Stunde Sonnenstand → Bin → Faktor → `gti × faktor`.
+1. `(azimut_bin, elevation_bin, wetterklasse)` ≥ 10 Datenpunkte → diesen Faktor
+2. `(azimut_bin, elevation_bin)` ohne Wetter ≥ 15 Datenpunkte
+3. `(saisonbin, stunde)` ≥ 15 Datenpunkte (klassische Variante-A-Logik)
+4. Skalar-Lernfaktor mit O1+O2-Optimierung (siehe oben)
 
-**Erfasst:** Verschattung physikalisch sauber. Gleicher Sonnenstand =
-gleiche Verschattung egal welche Jahreszeit.
+Stufe 3 als Fallback erhalten — Variante A wird damit nicht zur
+eigenständigen Variante, sondern zur degradierten Stufe in der Kaskade.
 
-**Aufwand:** höher. Solar-Position-Helper (~1 Tag, neutraler Helper),
-pre-aggregated Lookup-Tabelle pro Anlage.
+### Anwendung im Live-Pfad
 
-**Trigger:** konkrete Verschattungs-Anfrage UND Variante A reicht nicht.
+Pro stündlichem GTI-Wert in der Live-Prognose:
+1. Sonnenstand für (lat, lon, datum, stunde) berechnen → Azimut, Elevation
+2. Wetterklasse für die aktuelle Stunde aus Live-Wetter ableiten
+3. Lookup in `Korrekturprofil` mit Fallback-Kaskade → `faktor_h`
+4. `gti_h_korrigiert = gti_h × faktor_h`
 
-### Variante C — String-/WR-spezifisches Korrekturprofil
+### Variante C — String-spezifisch — bleibt reaktiv
 
-**Schema:** ein Profil (A oder B) **pro Investition** (PV-Modul-Gruppe
-oder WR) mit eigener Ausrichtung.
+Ein Korrekturprofil **pro Investition** statt pro Anlage ist eine reine
+Erweiterung des bestehenden Schemas (`investition_id` setzen statt
+NULL). Wird **nicht** in der Standard-Architektur verbaut, sondern auf
+konkrete Multi-WR-Anfrage hin aktiviert.
 
-**Daten-Bedarf:** IST-kWh pro String — bei den meisten Anlagen aktuell
-nicht erfasst.
+**Daten-Bedarf:** IST-kWh pro String. Bei den meisten Anlagen heute nicht
+erfasst, daher kein produktiver Daten-Pfad ohne Sensor-Mapping-Erweiterung.
 
-**Erfasst:** „Ostflügel verschattet, Westflügel nicht" sauber.
-
-**Aufwand:** hoch. Daten-Pipeline pro Investition, neues Tabellen-Layout,
-Sensor-Mapping pro String.
-
-**Trigger:** konkrete Multi-WR-Anfrage.
+**Trigger:** konkrete Multi-WR-Anfrage einer Anlage mit String-Sensorik.
 
 ## Datenmodell
 
-Ein einziges Schema, das alle drei Varianten ohne Migration trägt:
+Ein flexibles Schema, das die Ziel-Architektur sowie Fallback-Stufen
+trägt:
 
 ```python
 class Korrekturprofil(Base):
@@ -222,44 +252,71 @@ class Korrekturprofil(Base):
     anlage_id: Mapped[int] = mapped_column(ForeignKey("anlagen.id"))
     investition_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("investitionen.id"), nullable=True
-    )  # NULL = Anlagensumme, gesetzt = Variante C
+    )  # NULL = Anlagensumme, gesetzt = Variante C (reaktiv)
     quelle: Mapped[str]  # heute nur "openmeteo" (EEDC-Eingabe)
-    profil_typ: Mapped[str]  # "skalar" | "stunde" | "sonnenstand"
+    profil_typ: Mapped[str]
+    # "sonnenstand_wetter" | "sonnenstand" | "stunde" | "skalar"
     bin_definition: Mapped[dict] = mapped_column(JSON)
-    # skalar: {}
-    # stunde: {"saisonbin": "monat|quartal|gesamt"}
+    # sonnenstand_wetter: {"azimut_aufloesung": 10, "elevation_aufloesung": 10,
+    #                      "wetterklassen": ["klar", "diffus", "wechselhaft"]}
     # sonnenstand: {"azimut_aufloesung": 10, "elevation_aufloesung": 10}
+    # stunde: {"saisonbin": "monat|quartal|gesamt"}
+    # skalar: {}
     faktoren: Mapped[dict] = mapped_column(JSON)
+    # sonnenstand_wetter: {"110_30_klar": 0.72, "110_30_diffus": 0.95, ...}
+    # sonnenstand: {"110_30": 0.80, ...}
+    # stunde: {"4": {"7": 0.85, ...}, ...}
     # skalar: {"value": 1.01}
-    # stunde: {"4": {"7": 0.85, "8": 0.90, ...}, "5": {...}}
-    # sonnenstand: {"110_30": 0.70, "120_40": 0.85, ...}
+    datenpunkte_pro_bin: Mapped[dict] = mapped_column(JSON)
+    # für Fallback-Kaskade: {"110_30_klar": 42, ...}
     aktualisiert_am: Mapped[datetime]
 ```
 
 **Migrationspfad:**
 
-1. **Heute** — kein Eintrag in `korrekturprofile`. Lernfaktor wie bisher
-   in `_get_lernfaktor_detail` berechnet, kein Cache in DB.
-2. **Etappe 1 (Variante A) ohne Migration** — neue Einträge mit
-   `profil_typ='stunde'` werden vom Aggregator angelegt. `_get_lernfaktor`
-   prüft erst die Tabelle, fällt sonst auf den alten Skalar zurück.
-3. **Etappe 2 (Variante B) ohne Migration** — `profil_typ='sonnenstand'`
-   ergänzt sich neben Variante A.
-4. **Etappe 3 (Variante C) ohne Migration** — `investition_id` wird
-   gesetzt, das gleiche Schema trägt das.
+1. **Päckchen 1** — kein Eintrag in `korrekturprofile`. Lernfaktor wie
+   heute in `_get_lernfaktor_detail`, jetzt mit O1+O2 als Doppel-Variante.
+   Stündliche Wetter-Daten werden in `TagesEnergieProfil` mitgeschrieben,
+   2-Jahres-Backfill aus Open-Meteo Archive füllt die Historie.
+2. **Päckchen 2** — Aggregator schreibt `profil_typ='sonnenstand_wetter'`
+   pro Anlage. Live-Pfad konsumiert die Tabelle mit Fallback-Kaskade. UI
+   bekommt Heatmap als Diagnose-Sicht.
+3. **Reaktiv (Variante C)** — bei konkreter Multi-WR-Anfrage:
+   `investition_id` setzen, das gleiche Schema trägt es ohne Migration.
 
-## Aufwand und Reihenfolge
+## Aufwand und Reihenfolge — zwei Päckchen plus Reaktives
 
-| Schritt | Aufwand | Voraussetzung |
-|---|---|---|
-| O2 Trim-Mean als Doppel-Variante | ~halber Tag | nichts |
-| O1 Recency als Doppel-Variante | ~halber Tag | nach O2 |
-| Wetter-Stratifizierung im Prognosen-Tab | ~1-2 Tage | Doppel-Vergleich aktiv |
-| Aktivierung O1+O2 als neuer Default | ~Stunde | Doppel-Vergleich zeigt klar Verbesserung |
-| Variante A planen + implementieren | mehrere Wochen | Stratifizierung zeigt Stunden-Bias |
-| Variante B / C | hoch | reaktiv, nur auf konkrete Anfrage |
-| O3 Schneeerkennung | mittel | eigenes Issue, nach Winter 2026/27 |
-| Prognosen-Tab entfernen | ~halber Tag | nach 12 Monaten Saison-Beobachtung |
+### Päckchen 1 (~4 Tage) — Daten-Layer und Skalar-Verbesserung
+
+| Schritt | Aufwand |
+|---|---|
+| Stündliche Wetter-Spalten in `TagesEnergieProfil` | ½ Tag |
+| Live-Pfad: Wetter-Werte beim Forecast-Fetch persistieren | ½ Tag |
+| Backfill-Job aus Open-Meteo Archive (2 Jahre rückwirkend) | 1 Tag |
+| Wetter-Klassifikations-Helper (klar/diffus/wechselhaft) | ½ Tag |
+| O2 Trim-Mean + O1 Recency-Boost als Doppel-Variante | ½ Tag |
+| Stratifizierungs-Endpoint (MAE/MBE pro Klasse × Stunde) | ½ Tag |
+| Frontend: Stratifizierungs-Card + O12-Diagnose-Card (additiv, Solcast-Spalte bleibt — Tester-Pakt mit Rainer) | ½ Tag |
+
+### Päckchen 2 (~5–7 Tage) — Korrekturprofil aktiv
+
+| Schritt | Aufwand |
+|---|---|
+| Solar-Position-Helper (Sonnenstand pro lat/lon/datum/stunde) | ½ Tag |
+| `Korrekturprofil`-Schema + DB-Migration | ½ Tag |
+| Aggregator-Job (Sonnenstand × Wetter) mit Fallback-Kaskade | 1–2 Tage |
+| Live-Pfad: Lookup in `get_live_wetter` mit Kaskade | 1 Tag |
+| Frontend-Heatmap als Diagnose-Sicht | 1–2 Tage |
+| End-to-end-Test, Backfill-Reaggregation, Edge Cases | 1 Tag |
+
+### Reaktiv
+
+| Schritt | Trigger |
+|---|---|
+| Aktivierung O1+O2 als neuer Skalar-Default | Doppel-Vergleich zeigt klar Verbesserung über mehrere Wochen |
+| Variante C (String-spezifisch) | Konkrete Multi-WR-Anfrage |
+| O3 Schneeerkennung | Eigenes Issue, nach Winter 2026/27 |
+| Prognosen-Tab entfernen | Nach 12 Monaten saisonaler Beobachtung, wenn Korrekturprofil sich bewährt |
 
 ## Was nicht zu dieser Doku gehört
 
