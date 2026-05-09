@@ -27,9 +27,9 @@ identifiziert, die eine Revision von Etappe 1 notwendig machen, **bevor** mit Et
 | **Snapshot-Rework** | kWh aus W-Integration → kumulative Zähler-Snapshots | ✅ v3.19.0 (#135) |
 | **Slot-Konvention + GTI** | Backward-Konvention, lineare Interpolation, GTI für PR | ✅ v3.20.0 (#144 + #145 + #139) |
 | **Pro-Tag-Reaggregation + `:55`-Preview + Tage-Tabelle** | Selbsthilfe-Knopf, neue `<CollapsibleSection>` | ✅ v3.21.0 (#146 + #148) |
-| **Reload-Self-Healing** | Counter-Boundary + „Nur neu rechnen"-Pfad | ✅ v3.26.6 |
-| **Etappe 3c** | Architektur-Konsolidierung Read-/Write-Pfade (Slot-Konvention typisieren, Tagesgesamt = Σ Hourly, Snapshot-Quellen-Tracking, Resnap/Aggregat trennen) | ⏳ Sprint 2 |
-| **Etappe 3d** | Daten-Provenance & Reparatur-Architektur (Quellen-Hierarchie, Konflikt-Resolver, Reparatur-Orchestrator) | ⏳ Konzept-Phase nach 3c |
+| **Reload-Self-Healing** | Counter-Boundary + „Nur neu rechnen"-Pfad (Bug A gelöst) | ✅ v3.26.6 |
+| **Etappe 3c** | Architektur-Konsolidierung Read-/Write-Pfade — Detail-Konzept: [`KONZEPT-ENERGIEPROFIL-3C.md`](KONZEPT-ENERGIEPROFIL-3C.md) (Slot-Konvention an #144 angleichen, Tagesgesamt = Boundary-Diff, Source-Marker auf `sensor_snapshots`, UI-Trennung Resnap/Reaggregat) | ⏳ Sprint 2 |
+| **Etappe 3d** | Daten-Provenance & Reparatur-Architektur — Detail-Konzept: [`KONZEPT-DATENPIPELINE.md`](KONZEPT-DATENPIPELINE.md) (Quellen-Hierarchie, Konflikt-Resolver, Reparatur-Orchestrator) | ⏳ nach 3c |
 | **Etappe 4** | Saisonale Muster (Sommer/Winter, Jahresvergleich, Autarkie-Verlauf) | ⏳ Voraussetzung 6–12 Monate Daten + 3c fertig |
 | **Etappe 5** | Speicher-Dimensionierung (Was-wäre-wenn) | ⏳ verbunden mit #142 |
 
