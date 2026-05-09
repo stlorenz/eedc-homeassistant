@@ -1,15 +1,17 @@
 # Konzept: Infothek — Verträge, Zähler & Dokumentation
 
-> Erstellt: 2026-03-25 | Status: **Konzept** | Auslöser: Rainer (PN community.simon42.com #81931)
+> Erstellt: 2026-03-25 | **Status: ✅ vollständig in v3.5.0 ausgeliefert** | Folge-Iteration N:M-Verknüpfung in v3.15.2 (Komponenten-Akte) | Konzept-Doc als Architektur-Referenz erhalten | Auslöser: Rainer (PN community.simon42.com #81931)
 
 ## Implementierungsstand
 
 | Etappe | Status | Version | Beschreibung |
 |--------|--------|---------|-------------|
-| **Etappe 1** | Fertig | 3.5.0 | Datenmodell, CRUD-API, Frontend-Seite (Kernfelder + 14 Kategorien) |
-| **Etappe 2** | Fertig | 3.5.0 | Datei-Upload (Fotos + PDFs) mit Resize, Thumbnails, Lightbox |
-| **Etappe 3** | Fertig | 3.5.0 | Verknüpfung mit Investitionen, Vertragspartner, Vorbelegung, Migration |
-| **Etappe 4** | Fertig | 3.5.0 | PDF-Export, Markdown-Notizen |
+| **Etappe 1** | ✅ | 3.5.0 | Datenmodell, CRUD-API, Frontend-Seite (Kernfelder + 14 Kategorien) |
+| **Etappe 2** | ✅ | 3.5.0 | Datei-Upload (Fotos + PDFs) mit Resize, Thumbnails, Lightbox |
+| **Etappe 3** | ✅ | 3.5.0 | Verknüpfung mit Investitionen, Vertragspartner, Vorbelegung, Migration |
+| **Etappe 4** | ✅ | 3.5.0 | PDF-Export, Markdown-Notizen |
+| **Etappe 5** | ✅ | 3.15.2 | N:M-Verknüpfung Investition ↔ Infothek (ein Datenblatt für mehrere Investitionen, Komponenten-Akte direkt am Investment) |
+| **Etappe 6** | ✅ | 3.16.2 | `stamm_*`/`ansprechpartner_*`/`wartung_*`-Felder aus Investitionsformular entfernt, Verknüpfungen inline (Etappe 3.6) |
 
 ---
 

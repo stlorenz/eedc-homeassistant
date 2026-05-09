@@ -1,6 +1,7 @@
 # Konzept: Auf-/Zuklappen + Sortierung in allen Cockpit-Seiten
 
-**Status:** Draft — Umsetzungsplan für Issue #175 (detLAN: Auf-/Zuklappen + Sortierung in andere Ansichten)
+**Status (2026-05-09):** Heute-Schritt-Plan (Schritt 1–4) ✅ in v3.25.3 ausgeliefert (Commit 6f7cd931, #175 SortableSection). `SortableSection.tsx` existiert in `components/ui/`. Ausroll-Status der Phase „Nach detLAN-Feedback" (PV / Speicher / Wallbox / E-Auto / BKW) ist nicht systematisch dokumentiert — sollte vor Reaktivierung gegen den Code geprüft werden. Weiteres Ausrollen ist nicht aktiv geplant; bleibt in `drafts/` als Aufroll-Plan, falls detLAN-Feedback weitere Cockpits anstößt.
+
 **Datum:** 2026-04-30
 **Auslöser:** detLAN möchte das Auf-/Zuklappen + Sortier-Feature aus *Monatsberichte* auch in den anderen Cockpits (PV / Speicher / Wärmepumpe / Wallbox / E-Auto / Balkonkraftwerk / Sonstiges).
 
