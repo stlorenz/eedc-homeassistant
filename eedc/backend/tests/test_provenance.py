@@ -260,8 +260,8 @@ async def test_unknown_source_raises_keyerror():
         try:
             await write_with_provenance(
                 session, md, "netzbezug_kwh", 100.0,
-                source="manual:json_backup",  # wird P2 sein, in P1 noch nicht
-                writer="restore_op",
+                source="external:imaginary_provider",  # nicht in SOURCE_LABELS
+                writer="phantom_op",
             )
         except KeyError:
             raised = True

@@ -185,6 +185,8 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
     "repair": SourcePriority.REPAIR,                                # Repair-Orchestrator force_override
     "manual:form": SourcePriority.MANUAL,                           # Monatsdaten/Investitions-Form
     "manual:csv_import": SourcePriority.MANUAL,                     # CSV-Wizard
+    "manual:json_backup": SourcePriority.MANUAL,                    # Anlagen-JSON-Backup-Restore (P2)
+    "manual:csv_backup":  SourcePriority.MANUAL,                    # CSV-Operations-Backup-Pfad (P2)
     # 11 Cloud-Provider aus services/cloud_import/
     "external:cloud_import:anker_solix":         SourcePriority.EXTERNAL_AUTHORITATIVE,
     "external:cloud_import:deye_solarman":       SourcePriority.EXTERNAL_AUTHORITATIVE,
@@ -198,11 +200,20 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
     "external:cloud_import:sungrow_isolarcloud": SourcePriority.EXTERNAL_AUTHORITATIVE,
     "external:cloud_import:viessmann_gridbox":   SourcePriority.EXTERNAL_AUTHORITATIVE,
     "external:ha_statistics": SourcePriority.EXTERNAL_AUTHORITATIVE,
+    "external:portal_import": SourcePriority.EXTERNAL_AUTHORITATIVE, # routes/data_import.py:apply (P2)
     "auto:monatsabschluss":  SourcePriority.AUTO_AGGREGATION,
+    "auto:demo_data":  SourcePriority.AUTO_AGGREGATION,             # Demo-Daten-Loader (P2)
     "fallback:sensor_snapshot": SourcePriority.FALLBACK,
     "fallback:mqtt_inbound":    SourcePriority.FALLBACK,
 }
 ```
+
+**Vier P2-Erweiterungen** über die ursprüngliche Re-Inventur hinaus:
+
+- `manual:json_backup` — User klickt im Datenverwaltungs-Tab auf „Anlagen-Backup einspielen". Explizite User-Aktion, daher MANUAL-Klasse.
+- `manual:csv_backup` — CSV-Operations-Backup-Re-Import (anderer Pfad als der CSV-Wizard `manual:csv_import`). Auch explizite User-Aktion.
+- `auto:demo_data` — Standalone-Demo-Daten beim ersten Anlegen einer Anlage, AUTO_AGGREGATION-Klasse damit nachträgliche Form-Bearbeitung sie sauber schlägt.
+- `external:portal_import` — Generisches Cloud-/Portal-Apply-Label für [`routes/data_import.py:apply_import`](../eedc/backend/api/routes/data_import.py). Heute reicht das Frontend nur `datenquelle="portal_import"|"cloud_import"` durch, nicht den konkreten Cloud-Provider-Slug. Die 11 spezifischen `external:cloud_import:<provider>`-Labels werden erst aktiv, wenn das Frontend einen `provider_id`-Query-Param mitschickt — separates Sub-Päckchen, kein P2-Blocker.
 
 `repair` als eigene Stufe (statt nur `force_override=True`-Flag auf einer anderen Quelle) macht Korrektur-Läufe im Audit-Log auf den ersten Blick erkennbar — relevant für Diagnose-Frage „warum hat dieser Wert seine Provenance verloren?".
 
@@ -472,7 +483,7 @@ Cloud-Importer schreiben heute nicht direkt in die DB — sie liefern Daten an d
 
 Die 11 Connector-Files in `services/cloud_import/*.py` (`anker_solix`, `deye_solarman`, `ecoflow_powerocean`, `ecoflow_powerstream`, `fronius_solarweb`, `growatt`, `hoymiles_smiles`, `huawei_fusionsolar`, `solaredge`, `sungrow_isolarcloud`, `viessmann_gridbox`) selbst müssen nicht angefasst werden — sie produzieren nur Daten, persistieren nicht.
 
-`SOURCE_LABELS` in [`source_priority.py`](../eedc/backend/core/source_priority.py) muss damit erweitert werden um `manual:json_backup` (MANUAL), `manual:csv_backup` (MANUAL), `auto:demo_data` (AUTO_AGGREGATION). Diese drei Labels sind Päckchen-2-Lieferung, nicht Päckchen-1 — Päckchen 1 trägt nur das Vokabular ein, das im Konzept Sektion 3.1 explizit benannt ist (`manual:form`, `manual:csv_import`, 11× `external:cloud_import:*`, `external:ha_statistics`, `auto:monatsabschluss`, `fallback:sensor_snapshot`, `fallback:mqtt_inbound`, `repair`).
+`SOURCE_LABELS` in [`source_priority.py`](../eedc/backend/core/source_priority.py) ist mit P2 erweitert um `manual:json_backup` (MANUAL), `manual:csv_backup` (MANUAL), `auto:demo_data` (AUTO_AGGREGATION) und `external:portal_import` (EXTERNAL_AUTHORITATIVE). Damit deckt das Vokabular alle in der Re-Inventur (Sektion 1.1) gefundenen Schreib-Pfade ab. Die 11 `external:cloud_import:<provider>`-Labels werden erst aktiv, wenn das Frontend den konkreten Provider-Slug an `data_import.py:apply_import` durchreicht — Sub-Päckchen für später.
 
 ## 7. Modul-Refactoring (Monster-PYs zerlegen)
 

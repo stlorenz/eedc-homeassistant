@@ -44,9 +44,15 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
     # Repair (force_override über Repair-Orchestrator, P4-Lieferung)
     "repair": SourcePriority.REPAIR,
 
-    # Manual (User-Eingabe)
+    # Manual (User-Eingabe oder User-bestätigte Aktion)
     "manual:form": SourcePriority.MANUAL,
     "manual:csv_import": SourcePriority.MANUAL,
+    # P2-Erweiterung: Anlagen-Backup-Restore + Backup-CSV-Re-Import.
+    # Beide sind explizite User-Klicks („Backup einspielen") — User-Wille,
+    # also MANUAL-Klasse. Bei gleichzeitigem manual:form-Eintrag im selben
+    # Feld gewinnt Last-Writer-Wins.
+    "manual:json_backup": SourcePriority.MANUAL,
+    "manual:csv_backup":  SourcePriority.MANUAL,
 
     # External Authoritative — 11 Cloud-Provider aus services/cloud_import/
     # Apply-Pfad: routes/data_import.py → routes/import_export/helpers.py
@@ -68,17 +74,25 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
     # (services/ha_statistics_service.py + routes/ha_statistics.py)
     "external:ha_statistics": SourcePriority.EXTERNAL_AUTHORITATIVE,
 
+    # P2-Erweiterung: Hersteller-Portal-Datei-Upload (Apply-Pfad in
+    # routes/data_import.py) und Cloud-Sync-Apply ohne Provider-Spezifizierung.
+    # Provider-spezifische external:cloud_import:<provider>-Labels werden
+    # erst aktiv, wenn das Frontend den provider_id-Query-Param mitschickt
+    # (heute setzt es nur datenquelle="portal_import"|"cloud_import").
+    "external:portal_import": SourcePriority.EXTERNAL_AUTHORITATIVE,
+
     # Auto-Aggregation — Monatsabschluss-Roll-up aus Tageswerten
     # (routes/monatsabschluss.py — wird in P3 in Service-Schicht ausgelagert)
     "auto:monatsabschluss":  SourcePriority.AUTO_AGGREGATION,
+    # P2-Erweiterung: Demo-Daten-Loader für Standalone-Erstinstallation.
+    # AUTO_AGGREGATION-Klasse, damit nachträgliche manuelle Bearbeitung
+    # die Demo-Werte sauber schlägt.
+    "auto:demo_data": SourcePriority.AUTO_AGGREGATION,
 
     # Fallback — Sensor-Snapshot-Aggregator + MQTT-Inbound-Pfad
     "fallback:sensor_snapshot": SourcePriority.FALLBACK,
     "fallback:mqtt_inbound":    SourcePriority.FALLBACK,
 }
-
-# Päckchen 2 erweitert dieses Dict um manual:json_backup, manual:csv_backup
-# (beide MANUAL) und auto:demo_data (AUTO_AGGREGATION) — vgl. Konzept Sektion 6.3.
 
 
 def get_priority(source: str) -> SourcePriority:
