@@ -93,6 +93,14 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
     "external:tom_ha_sfml":  SourcePriority.EXTERNAL_AUTHORITATIVE,
     "external:solcast":      SourcePriority.EXTERNAL_AUTHORITATIVE,
 
+    # External Authoritative — Kraftstoff-Preis-Quellen (P3-Aufräum 2026-05-09).
+    # Generisches Label statt provider-spezifisch (Memory-Linie
+    # `feedback_pfadabhaengigkeits_reflex.md`): heute liefert nur EU Oil
+    # Bulletin (`services/kraftstoff_preis_service.py`), spätere Provider
+    # (Tankerkönig u. ä.) liefen unter dem gleichen Label, Writer-Feld zur
+    # Unterscheidung.
+    "external:fuel_price":   SourcePriority.EXTERNAL_AUTHORITATIVE,
+
     # P2-Erweiterung: Hersteller-Portal-Datei-Upload (Apply-Pfad in
     # routes/data_import.py) und Cloud-Sync-Apply ohne Provider-Spezifizierung.
     # Provider-spezifische external:cloud_import:<provider>-Labels werden
