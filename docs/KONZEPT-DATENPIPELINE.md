@@ -1,6 +1,6 @@
 # Konzept: Daten-Pipeline & Reparatur-Architektur (Etappe 3d)
 
-> **Status:** Päckchen 1 in Arbeit ab 2026-05-09. Re-Inventur (Sektion 1) abgeschlossen, Schema-Fundament + `source_priority.py` + `write_with_provenance()` Lieferung dieses Päckchens.
+> **Status:** Päckchen 1 + 2 + 3 ausgeliefert 2026-05-09 (20 Commits seit v3.26.8, kein Release). Päckchen 4 (Reparatur-Orchestrator) als nächstes. 27 SOURCE_LABELS, 6 Hierarchie-Stufen, 23 Tests grün.
 > **Voraussetzung Implementierung:** Etappe 3c abgeschlossen ✅ v3.26.8 (Detail-Konzept: [`KONZEPT-ENERGIEPROFIL-3C.md`](KONZEPT-ENERGIEPROFIL-3C.md) — Slot-Konvention an [#144](https://github.com/supernova1963/eedc-homeassistant/issues/144) angleichen + `quelle`-Marker auf `sensor_snapshots` als Schema-Vorlage).
 > **Ziel:** Provenance, Konflikt-Resolver, Reparatur-Orchestrator, Idempotenz und Aufräumen der Monster-Module der gesamten Aggregat-Daten-Schicht.
 
@@ -19,29 +19,30 @@ Implementierung sequenziell **nach** Etappe 3c, kein Quick-Win-Vorziehen. Refact
 
 ### 1.1 Eingabe-Pfade (Schreiber auf Aggregat-Tabellen)
 
-#### `monatsdaten` — 8 Schreiber
+#### `monatsdaten` — 9 Schreiber
 
 | # | Pfad | Code-Stelle | Schreib-Modus heute |
 |---|---|---|---|
-| 1 | Manual-Form | [`routes/monatsdaten.py:435`](../eedc/backend/api/routes/monatsdaten.py) | INSERT (Update über ID-Pfad in derselben Datei) |
-| 2 | Auto-Aggregation Monatsabschluss | [`routes/monatsabschluss.py:883`](../eedc/backend/api/routes/monatsabschluss.py) | INSERT, kein Konflikt-Check |
-| 3 | CSV-Import (eigene Datei) | [`routes/custom_import.py:1000`](../eedc/backend/api/routes/custom_import.py) | INSERT (Apply-Schritt) |
-| 4 | HA-Statistics-Import | [`routes/ha_statistics.py:928`](../eedc/backend/api/routes/ha_statistics.py) | INSERT (Backfill) |
-| 5 | Demo-Data-Loader | [`routes/import_export/demo_data.py:393`](../eedc/backend/api/routes/import_export/demo_data.py) | INSERT (Standalone-Erstinstallation) |
-| 6 | CSV-Operations (Backup-CSV) | [`routes/import_export/csv_operations.py:455`](../eedc/backend/api/routes/import_export/csv_operations.py) | INSERT (separater Pfad vom Custom-Import) |
-| 7 | JSON-Backup-Restore | [`routes/import_export/json_operations.py:695`](../eedc/backend/api/routes/import_export/json_operations.py) | INSERT (Anlagen-Backup einspielen) |
-| 8 | Cloud-Import Apply | [`routes/data_import.py:316`](../eedc/backend/api/routes/data_import.py) | INSERT-or-UPDATE über `_upsert_investition_monatsdaten`-Pattern |
+| 1 | Manual-Form (REST-CRUD) | [`routes/monatsdaten.py:451`](../eedc/backend/api/routes/monatsdaten.py) | INSERT (Update über ID-Pfad in derselben Datei) |
+| 2 | Wizard Form-Save (Monatsabschluss-Wizard) | [`routes/monatsabschluss.py:843`](../eedc/backend/api/routes/monatsabschluss.py) | UPDATE/INSERT via `write_with_provenance(manual:form)` (P3) |
+| 3 | CSV-Import (Custom-Wizard) | [`routes/custom_import.py:1025`](../eedc/backend/api/routes/custom_import.py) | INSERT (Apply-Schritt) |
+| 4 | HA-Statistics-Import | [`routes/ha_statistics.py:940`](../eedc/backend/api/routes/ha_statistics.py) | INSERT (Backfill) |
+| 5 | Demo-Data-Loader | [`routes/import_export/demo_data.py:414`](../eedc/backend/api/routes/import_export/demo_data.py) | INSERT (Standalone-Erstinstallation) |
+| 6 | CSV-Operations (Backup-CSV) | [`routes/import_export/csv_operations.py:482`](../eedc/backend/api/routes/import_export/csv_operations.py) | INSERT (separater Pfad vom Custom-Import) |
+| 7 | JSON-Backup-Restore | [`routes/import_export/json_operations.py:708`](../eedc/backend/api/routes/import_export/json_operations.py) | INSERT (Anlagen-Backup einspielen) |
+| 8 | Cloud-Import Apply | [`routes/data_import.py:347`](../eedc/backend/api/routes/data_import.py) | INSERT-or-UPDATE über `_upsert_investition_monatsdaten`-Pattern |
+| 9 | Auto-Rollup (Monats-Aggregation) | [`services/energie_profil/rollup.py:32`](../eedc/backend/services/energie_profil/rollup.py) | UPDATE 5 Top-Level-Felder via `write_with_provenance(auto:monatsabschluss)` (P3); orchestriert über [`services/monatsabschluss_aggregator.py`](../eedc/backend/services/monatsabschluss_aggregator.py) Background-Task |
 
 #### `investition_monatsdaten` — 6 Constructor-Stellen + 11 Cloud-Importer (indirekt)
 
 | # | Pfad | Code-Stelle | Schreib-Modus heute |
 |---|---|---|---|
-| 1 | Manual-Form | [`routes/monatsdaten.py:497`](../eedc/backend/api/routes/monatsdaten.py) | INSERT |
-| 2 | Auto-Aggregation | [`routes/monatsabschluss.py:921`](../eedc/backend/api/routes/monatsabschluss.py) | INSERT |
-| 3 | HA-Statistics-Import | [`routes/ha_statistics.py:1016`](../eedc/backend/api/routes/ha_statistics.py) | INSERT (Backfill) |
-| 4 | `_upsert_investition_monatsdaten` (zentraler Helper) | [`routes/import_export/helpers.py:97`](../eedc/backend/api/routes/import_export/helpers.py) | UPDATE-or-INSERT mit Skip-/Merge-Logik. **Konsumenten:** [`routes/custom_import.py`](../eedc/backend/api/routes/custom_import.py) (CSV) + [`routes/data_import.py`](../eedc/backend/api/routes/data_import.py) (Cloud-Apply) |
-| 5 | Demo-Data | [`routes/import_export/demo_data.py:434/457/476/491/510/527/537`](../eedc/backend/api/routes/import_export/demo_data.py) | 7 INSERT-Stellen (verschiedene Investitionstypen) |
-| 6 | JSON-Backup-Restore | [`routes/import_export/json_operations.py:649`](../eedc/backend/api/routes/import_export/json_operations.py) | INSERT |
+| 1 | Manual-Form (REST-CRUD) | [`routes/monatsdaten.py:535`](../eedc/backend/api/routes/monatsdaten.py) | INSERT |
+| 2 | Wizard Form-Save (Monatsabschluss-Wizard) | [`routes/monatsabschluss.py:894`](../eedc/backend/api/routes/monatsabschluss.py) | INSERT via `write_with_provenance(manual:form)` (P3). Kein Auto-Rollup auf `investition_monatsdaten` — Pendant zu Monatsdaten-Reihe 9 existiert hier bewusst nicht. |
+| 3 | HA-Statistics-Import | [`routes/ha_statistics.py:1048`](../eedc/backend/api/routes/ha_statistics.py) | INSERT (Backfill) |
+| 4 | `_upsert_investition_monatsdaten` (zentraler Helper) | [`routes/import_export/helpers.py:62`](../eedc/backend/api/routes/import_export/helpers.py) | Re-Export auf `services/import_writer.upsert_investition_monatsdaten_with_provenance` (P2). **Konsumenten:** [`routes/custom_import.py`](../eedc/backend/api/routes/custom_import.py) (CSV-Wizard) + [`routes/data_import.py`](../eedc/backend/api/routes/data_import.py) (Cloud-Apply) + [`routes/import_export/csv_operations.py`](../eedc/backend/api/routes/import_export/csv_operations.py) (Backup-CSV-Re-Import) |
+| 5 | Demo-Data | [`routes/import_export/demo_data.py:398`](../eedc/backend/api/routes/import_export/demo_data.py) | 7 INSERT-Stellen (verschiedene Investitionstypen) |
+| 6 | JSON-Backup-Restore | [`routes/import_export/json_operations.py:652`](../eedc/backend/api/routes/import_export/json_operations.py) | INSERT |
 
 **11 Cloud-Importer** in [`services/cloud_import/`](../eedc/backend/services/cloud_import/): `anker_solix`, `deye_solarman`, `ecoflow_powerocean`, `ecoflow_powerstream`, `fronius_solarweb`, `growatt`, `hoymiles_smiles`, `huawei_fusionsolar`, `solaredge`, `sungrow_isolarcloud`, `viessmann_gridbox`. **Bestätigt: keiner schreibt direkt** (`grep -n "InvestitionMonatsdaten(" services/cloud_import/*.py` = leer). Alle liefern Daten an [`routes/data_import.py`](../eedc/backend/api/routes/data_import.py) Apply-Pfad → `_upsert_investition_monatsdaten`.
 
@@ -156,15 +157,16 @@ Drei Befunde aus der Päckchen-1-Inventur, die Konzept v1 nicht hatte und die in
 
 ### 3.1 Hierarchie pro Feld
 
-Fünf Stufen, niedrigere Zahl = höhere Priorität:
+Sechs Stufen, niedrigere Zahl = höhere Priorität:
 
 | Priorität | Source-Klasse | Beispiele | Begründung |
 |---|---|---|---|
 | 0 | `repair` | Repair-Orchestrator mit `force_override=True` | Korrektur-Lauf steht über allem — ein expliziter User-„Reset" muss jede Hierarchie durchbrechen können. Audit-Log-pflichtig mit Operation-ID. |
 | 1 | `manual` | Monatsdaten-Form, Investitions-Form, CSV-Import-Wizard | User-Eingabe ist Wahrheit — niemals von Maschine überschreiben. CSV gleichauf, weil bewusst gewählter Klick-Pfad. |
-| 2 | `external_authoritative` | Cloud-Portale (Solaredge/Fronius/...), HA-Statistics-LTS-Backfill | Maschinen-bestätigte Quelle, aber nicht User-bestätigt. Konflikt zwischen Cloud + HA-Stats: Last-Writer-Wins (selten, in Praxis eindeutiger Pfad pro Anlage). |
+| 2 | `external_authoritative` | Cloud-Portale (Solaredge/Fronius/...), HA-Statistics-LTS-Backfill, Wetter-/Prognose-Quellen (OpenMeteo/Solcast/Tom-HA-SFML), EU Oil Bulletin | Maschinen-bestätigte Quelle, aber nicht User-bestätigt. Konflikt zwischen Cloud + HA-Stats: Last-Writer-Wins (selten, in Praxis eindeutiger Pfad pro Anlage). |
 | 3 | `auto_aggregation` | Monatsabschluss-Roll-up aus Tageswerten, abgeleitete Berechnungen | Berechnet, Annahmen-behaftet. |
 | 4 | `fallback` | Sensor-Snapshot Live-Aggregator, MQTT-Fallback bei HA-Lücken | Best-Effort, lückenanfällig. |
+| 5 | `legacy` | Bestandsdaten ohne dokumentierte Quelle (Initial-Migration in `_run_data_migrations` setzt `legacy:unknown` einmalig pro Installation) | Niedrigste Priorität — der erste bewusste Schreiber gewinnt automatisch, statt stillschweigend wegen `existing=None` zu greifen. Wird nie von Live-Schreib-Pfaden zur Laufzeit gesetzt. |
 
 Last-Writer-Wins innerhalb einer Stufe ist akzeptiert (gleiche „Vertrauensklasse" → kein zwingender Tiebreaker nötig). Wer wirklich entscheiden muss, kann den Repair-Orchestrator (Stufe 0) gezielt einsetzen.
 
@@ -180,6 +182,7 @@ class SourcePriority(IntEnum):
     EXTERNAL_AUTHORITATIVE = 2
     AUTO_AGGREGATION = 3
     FALLBACK = 4
+    LEGACY = 5                                                      # P3: Bestandsdaten-Marker (Initial-Migration only)
 
 SOURCE_LABELS: dict[str, SourcePriority] = {
     "repair": SourcePriority.REPAIR,                                # Repair-Orchestrator force_override
@@ -201,10 +204,21 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
     "external:cloud_import:viessmann_gridbox":   SourcePriority.EXTERNAL_AUTHORITATIVE,
     "external:ha_statistics": SourcePriority.EXTERNAL_AUTHORITATIVE,
     "external:portal_import": SourcePriority.EXTERNAL_AUTHORITATIVE, # routes/data_import.py:apply (P2)
+    # P3: Wetter-/Prognose-Quellen — heute alle in routes/live_wetter.py persistiert,
+    # ab Quellenwahl-Roadmap Schritt 4 jeweils eigener Schreiber pro Quelle.
+    "external:openmeteo":     SourcePriority.EXTERNAL_AUTHORITATIVE,
+    "external:tom_ha_sfml":   SourcePriority.EXTERNAL_AUTHORITATIVE,
+    "external:solcast":       SourcePriority.EXTERNAL_AUTHORITATIVE,
+    # P3: EU Oil Bulletin — generisches Kraftstoffpreis-Label (Tankerkönig u.a.
+    # liefen später unter dem gleichen Label, Writer-Feld zur Unterscheidung).
+    "external:fuel_price":    SourcePriority.EXTERNAL_AUTHORITATIVE,
     "auto:monatsabschluss":  SourcePriority.AUTO_AGGREGATION,
     "auto:demo_data":  SourcePriority.AUTO_AGGREGATION,             # Demo-Daten-Loader (P2)
     "fallback:sensor_snapshot": SourcePriority.FALLBACK,
     "fallback:mqtt_inbound":    SourcePriority.FALLBACK,
+    # P3: Bestandsdaten-Marker — gesetzt einmalig pro Installation in der
+    # Initial-Migration, nie von Live-Schreib-Pfaden zur Laufzeit.
+    "legacy:unknown": SourcePriority.LEGACY,
 }
 ```
 
@@ -214,6 +228,12 @@ SOURCE_LABELS: dict[str, SourcePriority] = {
 - `manual:csv_backup` — CSV-Operations-Backup-Re-Import (anderer Pfad als der CSV-Wizard `manual:csv_import`). Auch explizite User-Aktion.
 - `auto:demo_data` — Standalone-Demo-Daten beim ersten Anlegen einer Anlage, AUTO_AGGREGATION-Klasse damit nachträgliche Form-Bearbeitung sie sauber schlägt.
 - `external:portal_import` — Generisches Cloud-/Portal-Apply-Label für [`routes/data_import.py:apply_import`](../eedc/backend/api/routes/data_import.py). Heute reicht das Frontend nur `datenquelle="portal_import"|"cloud_import"` durch, nicht den konkreten Cloud-Provider-Slug. Die 11 spezifischen `external:cloud_import:<provider>`-Labels werden erst aktiv, wenn das Frontend einen `provider_id`-Query-Param mitschickt — separates Sub-Päckchen, kein P2-Blocker.
+
+**Fünf P3-Erweiterungen** (Stand 2026-05-09, 27 Labels insgesamt):
+
+- `external:openmeteo` / `external:tom_ha_sfml` / `external:solcast` — Vorgriff auf Quellenwahl-Roadmap Schritt 4. Heute schreibt nur [`routes/live_wetter.py:_persist_pv_prognose`](../eedc/backend/api/routes/live_wetter.py) alle drei Felder an einer Stelle; sobald der SFML-Connector / Solcast-Service eigene Schreiber wird, läuft das unter dem gleichen Label-Vokabular weiter (Risiko #3 prospektiv abgesichert).
+- `external:fuel_price` — generisches Kraftstoffpreis-Label, deckt heute den EU-Oil-Bulletin-Pfad in [`services/kraftstoff_preis_service.py`](../eedc/backend/services/kraftstoff_preis_service.py) ab. Bewusst nicht `external:eu_oil_bulletin`: alternative Provider (Tankerkönig u. ä.) liefen später unter dem gleichen Label, Writer-Feld unterscheidet — Memory-Linie `feedback_pfadabhaengigkeits_reflex.md` (nicht spekulativ vorgreifen).
+- `legacy:unknown` — Stufe `LEGACY` (5, niedriger als FALLBACK). Wird ausschließlich von der Initial-Migration in `_run_data_migrations` für Bestandsdaten gesetzt; der erste bewusste Schreiber gewinnt automatisch. Nie von Live-Schreib-Pfaden zur Laufzeit.
 
 `repair` als eigene Stufe (statt nur `force_override=True`-Flag auf einer anderen Quelle) macht Korrektur-Läufe im Audit-Log auf den ersten Blick erkennbar — relevant für Diagnose-Frage „warum hat dieser Wert seine Provenance verloren?".
 
@@ -514,6 +534,14 @@ Slice-Schnitte werden so gewählt, dass die Provenance-Integration danach **eine
 - **Verhalten unverändert:** Refactoring-PR ist reines Verschieben + Re-Export, alle Tests grün, kein Verhaltens-Diff. CI-Smoke + manueller Round-Trip in HA-Add-on.
 - **Keine spekulativen Slices:** ein Slice pro Verantwortlichkeit, die heute schon im File existiert. Nicht „könnte mal jemand brauchen". Memory-Linie `feedback_pfadabhaengigkeits_reflex.md` gilt auch hier.
 
+### 7.4 Pragma-verschobene Refactoring-Tails (Stand 2026-05-09)
+
+Drei Refactoring-Tails aus dem Päckchen-3-Plan wurden bewusst **nicht** mit ausgeliefert, weil sie keinen Provenance-Bezug haben und der Aufräum-Sprint im 3d-Bündel sonst zur Refactoring-Orgie geworden wäre (Memory-Linie `feedback_release_bundling.md`):
+
+- **`routes/monatsabschluss.py` Routes-Zerlegung in `wizard.py` / `views.py`** — die Auto-Aggregations-Logik ist mit Commit `4d52e65b` bereits in `services/monatsabschluss_aggregator.py` ausgelagert. Was im Route-File bleibt, sind Read-Endpoints + Wizard-Save-Pfad — beide bereits auf `write_with_provenance(manual:form)` (Commit `7702902c`). Eigener Sprint, kein P4-Blocker.
+- **`routes/custom_import.py` Routes-Zerlegung** in `analyze.py` / `preview.py` / `apply.py` / `templates.py` — der DB-Schreib-Pfad geht bereits über den gemeinsamen `services/import_writer.py`-Provenance-Wrapper (P2). Eigener Sprint, kein P4-Blocker.
+- **`services/energie_profil_service.py` Helper-Auslagerung** — die internen `_get_*`-Helper für Wetter/SoC/Strompreis sind die einzigen verbleibenden Insassen des Backbones (von 1224 → 360 Zeilen reduziert mit Commit `6fbf74da`). Folge-Refactor ohne strukturellen Auslöser.
+
 ## 8. Migrations-Roadmap
 
 Reihenfolge: Etappe 3c zuerst abschließen, dann Etappe 3d in nummerierten Päckchen. Pro Päckchen: **Refactoring-Tail** zuerst (Sektion 7.2), dann Architektur-Integration.
@@ -542,19 +570,23 @@ Reihenfolge: Etappe 3c zuerst abschließen, dann Etappe 3d in nummerierten Päck
 
 → **Akzeptanz:** `ueberschreiben=true` auf einem manuell gepflegten Feld lässt den manuellen Wert stehen + Wizard zeigt Schutz-Hinweis. Audit-Log dokumentiert die `rejected_lower_priority`-Entscheidung. UNIQUE-Constraint-Schutz aus dem Status quo bleibt unverändert wirksam.
 
-### Päckchen 3 — Konflikt-Resolver aktivieren
-- **Refactoring-Tail:** `services/energie_profil_service.py` + `services/sensor_snapshot_service.py` + `routes/monatsabschluss.py` zerlegen (Sektion 7.2). Auto-Aggregations-Logik aus der Monatsabschluss-Route in den neuen Service auslagern.
-- `write_with_provenance()` in alle 4 Aggregat-Schreib-Pfade einsetzen:
-  - Manual-Form (`routes/monatsdaten.py`)
-  - Auto-Aggregation (`services/monatsabschluss_aggregator.py` neu)
-  - HA-Stats-Import (`services/ha_statistics_service.py`)
-  - Solcast-Service (Stub für Risiko #3, finale Auflösung in Päckchen 6)
-- Daten-Checker: `PROVENANCE_CONFLICT`-Kategorie aktivieren
-- Migration: bestehende Datenbestände bekommen Initial-`source_provenance` mit Konvention `"legacy:unknown"` (niedrigste Priorität)
+### Päckchen 3 — Konflikt-Resolver aktivieren — ✅ AUSGELIEFERT 2026-05-09 (9 Commits, kein Release)
 
-→ **Akzeptanz:** Manuelle Korrektur überlebt nächtlichen Auto-Aggregations-Job. Daten-Checker meldet Doppel-Schreiber-Felder.
+- **Refactoring-Tail (ausgeliefert):**
+  - `6fbf74da` — `services/energie_profil_service.py` von 1224 auf 360 Zeilen reduziert; `rollup` / `backfill` / `scheduler_jobs` in eigene Slices unter `services/energie_profil/` extrahiert. `services/sensor_snapshot_service.py` war bereits 3c-erledigt (48 Z. Re-Export).
+  - `4d52e65b` — Auto-Aggregations-Logik aus `routes/monatsabschluss.py:_post_save_hintergrund` in den neuen `services/monatsabschluss_aggregator.py` ausgelagert. Routes-Zerlegung in `wizard.py`/`views.py` bewusst nicht mit eingebaut (kein Provenance-Bezug, eigener Sprint — siehe Sektion 7.4).
+- **Architektur (ausgeliefert):**
+  - `675de1b3` — Stufe `LEGACY=5` + `legacy:unknown`-Label (23. Source-Label) + idempotente Initial-Provenance-Migration für Bestandsdaten in `_run_data_migrations` (per-Sub-Key für JSON-Spalten). 6 Akzeptanz-Tests grün.
+  - `7702902c` — Manual-Form: REST-CRUD (`routes/monatsdaten.py:435/497`) + Wizard-Save (`routes/monatsabschluss.py:save_monatsabschluss`) auf `write_with_provenance(manual:form)` + `write_json_subkey_with_provenance` umgestellt. Berechnete Felder bekommen `auto:monatsabschluss`. DELETE bekommt `log_delete()`-Audit-Eintrag.
+  - `0947089c` — Auto-Aggregation: neuer Helper-Modul `services/energie_profil/_provenance_helpers.py` mit `seed_tz_provenance` / `seed_tep_provenance`. `aggregate_day` setzt `auto:monatsabschluss` per `seed_provenance` (kein Per-Feld-Audit-Spam — 24h × 15 Felder + 25 = 385/Tag/Anlage wäre zu viel). `rollup_month` per Feld via `write_with_provenance` (5 Felder, UPDATE-Pattern).
+  - `0d965077` — HA-Stats-Import: `seed_tz_provenance` / `seed_tep_provenance` mit optionalem `source`-Parameter (Default `auto:monatsabschluss`). `backfill_from_statistics` ruft sie mit `external:ha_statistics`. `routes/ha_statistics.py` INSERT/UPDATE für `Monatsdaten` + `InvestitionMonatsdaten` über Resolver.
+  - `5315b0e1` — Solcast-Stub: drei neue Source-Labels `external:openmeteo` / `external:tom_ha_sfml` / `external:solcast`. `routes/live_wetter.py:_persist_pv_prognose` UPDATE-Pfad via `write_with_provenance` pro Feld, INSERT-Pfad `seed_provenance` pro Source-Gruppe nur für non-None Felder. Vorgriff auf Quellenwahl-Roadmap Schritt 4.
+  - `672cd136` — Daten-Checker `PROVENANCE_CONFLICT`-Kategorie: Aggregations-Query auf `data_provenance_log` mit GROUP BY HAVING ≥ 2 distinct sources. Substring-Filter für md/tz/tep + `imd`. Hinweis-Charakter ohne Quittier-Knopf (Memory-Linie `feedback_daten_checker_kein_akzeptiert.md`). Frontend `DatenChecker.tsx` mit neuem Kategorie-Label.
+  - `7a736b3a` — Custom-Import + CSV-Operations Wizard-Tracking nachgezogen (`_track_upsert`-Closure analog `data_import.py`, `ApplyResponse`/`ImportResult` mit `geschuetzt_count`+`geschuetzte_felder`). Latenter P2-Bug behoben: drei Helper-Calls in `csv_operations.py` hatten keine Pflicht-kwargs `source`/`writer` — hätten beim ersten Trigger TypeError geworfen.
 
-### Päckchen 4 — Reparatur-Orchestrator
+→ **Akzeptanz erfüllt** (Stand 2026-05-09): Manuelle Korrektur überlebt nächtlichen Auto-Aggregations-Job. Daten-Checker meldet Doppel-Schreiber-Felder. Bestandsdaten haben Initial-Provenance. **23 Tests grün** (10 P1 + 7 P2 + 6 P3).
+
+### Päckchen 4 — Reparatur-Orchestrator (NÄCHSTES PÄCKCHEN)
 - **Refactoring-Tail:** `routes/energie_profil.py` zerlegen (Sektion 7.2). Repair-Endpoints landen in `routes/energie_profil/repair.py`.
 - `RepairOrchestrator`-Service mit Plan + Execute
 - Bestehende Repair-Endpoints zu Wrapper umstellen (kein Frontend-Break)
