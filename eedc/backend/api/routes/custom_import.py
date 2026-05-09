@@ -22,6 +22,7 @@ from backend.models.anlage import Anlage
 from backend.models.investition import Investition
 from backend.models.monatsdaten import Monatsdaten
 from backend.models.settings import Settings
+from backend.services.provenance import write_with_provenance
 from backend.api.routes.import_export.helpers import (
     _import_investition_monatsdaten_v09,
     _upsert_investition_monatsdaten,
@@ -998,24 +999,30 @@ async def apply_custom_import(
                 bat_entladung = bat_entladung_mapped
 
             # ── Monatsdaten schreiben ─────────────────────────────────────────
+            # Top-Level-Felder gehen über write_with_provenance (CSV-Wizard ist
+            # User-bestätigt → manual:csv_import). Hierarchie: gleiche MANUAL-
+            # Klasse wie manual:form, also Last-Writer-Wins beim ueberschreiben=True.
             if existing_md:
                 md = existing_md
             else:
                 md = Monatsdaten(anlage_id=anlage_id, jahr=jahr, monat=monat)
                 db.add(md)
+                await db.flush()  # damit md.id existiert
 
-            if einspeisung is not None:
-                md.einspeisung_kwh = einspeisung
-            if netzbezug is not None:
-                md.netzbezug_kwh = netzbezug
-            if eigenverbrauch is not None:
-                md.eigenverbrauch_kwh = eigenverbrauch
-            if pv_erzeugung is not None:
-                md.pv_erzeugung_kwh = pv_erzeugung
-            if bat_ladung is not None:
-                md.batterie_ladung_kwh = bat_ladung
-            if bat_entladung is not None:
-                md.batterie_entladung_kwh = bat_entladung
+            top_level_writes: list[tuple[str, Optional[float]]] = [
+                ("einspeisung_kwh", einspeisung),
+                ("netzbezug_kwh", netzbezug),
+                ("eigenverbrauch_kwh", eigenverbrauch),
+                ("pv_erzeugung_kwh", pv_erzeugung),
+                ("batterie_ladung_kwh", bat_ladung),
+                ("batterie_entladung_kwh", bat_entladung),
+            ]
+            for field_name, value in top_level_writes:
+                if value is not None:
+                    await write_with_provenance(
+                        db, md, field_name, value,
+                        source="manual:csv_import", writer="csv_wizard",
+                    )
             md.datenquelle = "custom_import"
 
             importiert += 1
