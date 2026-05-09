@@ -49,7 +49,10 @@ from backend.models import (  # noqa: E402, F401
     TagesEnergieProfil,
     TagesZusammenfassung,
 )
-from backend.services.provenance import write_with_provenance  # noqa: E402
+from backend.services.provenance import (  # noqa: E402
+    write_json_subkey_with_provenance,
+    write_with_provenance,
+)
 
 
 # ───────────────────────────── Test-Fixture ──────────────────────────────
@@ -87,6 +90,25 @@ async def _make_md(session: AsyncSession) -> Monatsdaten:
     session.add(md)
     await session.commit()
     return md
+
+
+async def _make_imd(session: AsyncSession) -> InvestitionMonatsdaten:
+    """Erstellt Anlage + Investition + InvestitionMonatsdaten."""
+    anlage = Anlage(anlagenname="Test", leistung_kwp=10.0, standort_land="DE")
+    session.add(anlage)
+    await session.flush()
+    inv = Investition(
+        anlage_id=anlage.id, typ="e-auto", bezeichnung="Test-EV",
+    )
+    session.add(inv)
+    await session.flush()
+    imd = InvestitionMonatsdaten(
+        investition_id=inv.id, jahr=2026, monat=4,
+        verbrauch_daten={}, source_provenance={},
+    )
+    session.add(imd)
+    await session.commit()
+    return imd
 
 
 async def _audit_decisions(session: AsyncSession) -> list[str]:
@@ -268,6 +290,88 @@ async def test_unknown_source_raises_keyerror():
         assert raised, "Unbekanntes Source-Label muss KeyError werfen"
 
 
+# ─────────── Tests für write_json_subkey_with_provenance (P2) ─────────────
+
+
+async def test_json_subkey_initial_write_applied():
+    """Initial-Write auf leeres JSON-Dict + leere Provenance → applied.
+    Sub-Key landet im verbrauch_daten-Dict, Provenance unter
+    'verbrauch_daten.<sub_key>'."""
+    async with _session_ctx() as session:
+        imd = await _make_imd(session)
+
+        result = await write_json_subkey_with_provenance(
+            session, imd, "verbrauch_daten", "km_gefahren", 1200.0,
+            source="manual:form", writer="user@example.com",
+        )
+        await session.commit()
+
+        assert result.decision == "applied"
+        assert imd.verbrauch_daten == {"km_gefahren": 1200.0}
+        assert imd.source_provenance["verbrauch_daten.km_gefahren"]["source"] == "manual:form"
+        assert (await _audit_decisions(session)) == ["applied"]
+
+
+async def test_json_subkey_per_field_hierarchy_protection():
+    """Manuelle km_gefahren überlebt Cloud-Sync, der parallel ladung_kwh
+    ergänzt. Per-Sub-Key-Hierarchie ist der Witz."""
+    async with _session_ctx() as session:
+        imd = await _make_imd(session)
+
+        # User pflegt km_gefahren manuell
+        await write_json_subkey_with_provenance(
+            session, imd, "verbrauch_daten", "km_gefahren", 1200.0,
+            source="manual:form", writer="alice@example.com",
+        )
+        # Cloud-Sync versucht km_gefahren UND ladung_kwh
+        r1 = await write_json_subkey_with_provenance(
+            session, imd, "verbrauch_daten", "km_gefahren", 1500.0,  # destruktiv
+            source="external:cloud_import:fronius_solarweb",
+            writer="cloud_account_42",
+        )
+        r2 = await write_json_subkey_with_provenance(
+            session, imd, "verbrauch_daten", "ladung_kwh", 130.0,
+            source="external:cloud_import:fronius_solarweb",
+            writer="cloud_account_42",
+        )
+        await session.commit()
+
+        assert r1.decision == "rejected_lower_priority"
+        assert r1.conflicting_source == "manual:form"
+        assert r2.decision == "applied"
+
+        # km_gefahren UNVERÄNDERT (manueller Wert geschützt),
+        # ladung_kwh frisch dazu (kein Vorgänger).
+        assert imd.verbrauch_daten == {"km_gefahren": 1200.0, "ladung_kwh": 130.0}
+        assert imd.source_provenance["verbrauch_daten.km_gefahren"]["source"] == "manual:form"
+        assert imd.source_provenance["verbrauch_daten.ladung_kwh"]["source"] == \
+            "external:cloud_import:fronius_solarweb"
+        # Audit-Log: 1 applied + 1 rejected + 1 applied
+        assert (await _audit_decisions(session)) == ["applied", "rejected_lower_priority", "applied"]
+
+
+async def test_json_subkey_force_override_writes_repair():
+    """force_override auf JSON-Sub-Key durchbricht Hierarchie + setzt
+    Source 'repair'."""
+    async with _session_ctx() as session:
+        imd = await _make_imd(session)
+
+        await write_json_subkey_with_provenance(
+            session, imd, "verbrauch_daten", "km_gefahren", 1200.0,
+            source="manual:form", writer="alice@example.com",
+        )
+        result = await write_json_subkey_with_provenance(
+            session, imd, "verbrauch_daten", "km_gefahren", 800.0,
+            source="manual:form", writer="repair_op_99",
+            force_override=True,
+        )
+        await session.commit()
+
+        assert result.decision == "applied"
+        assert imd.verbrauch_daten["km_gefahren"] == 800.0
+        assert imd.source_provenance["verbrauch_daten.km_gefahren"]["source"] == "repair"
+
+
 # ─────────────────────────────── Runner ──────────────────────────────────
 
 
@@ -279,6 +383,10 @@ _TESTS = [
     test_no_op_same_value_with_input_hash,
     test_force_override_breaks_hierarchy,
     test_unknown_source_raises_keyerror,
+    # P2 — JSON-Sub-Key-Variante
+    test_json_subkey_initial_write_applied,
+    test_json_subkey_per_field_hierarchy_protection,
+    test_json_subkey_force_override_writes_repair,
 ]
 
 
