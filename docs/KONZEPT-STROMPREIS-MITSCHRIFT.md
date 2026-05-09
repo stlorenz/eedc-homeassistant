@@ -1,5 +1,7 @@
 # Konzept: Stündliche Strompreis-Mitschrift
 
+> **Status (2026-05-09):** Phase 1 (stündliche Mitschrift Endpreis + Börsenpreis im `TagesEnergieProfil`) ✅ ausgeliefert in v3.16.0. Tagesverlauf-Overlay (Lese-Pfad) ✅ v3.15.8. §51-KPIs (Negativpreis-Aggregate) ✅ v3.16.x. **Offen:** Monatsabschluss-Vorschlag (verbrauchsgewichteter Ø-Preis als Vorbelegung) — Aufwand vs. Nutzen noch unklar (Wert muss ohnehin gegen Anbieter-Abrechnung geprüft werden), in Roadmap [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) als „In Arbeit / Nächster Sprint"-Item geführt. Phase-2 (direkter API-Connector Tibber/aWATTar) ist nicht angefasst.
+
 ## Motivation
 
 EEDC kennt Strompreise bisher nur als **feste Monatswerte** (`Strompreis`-Model mit

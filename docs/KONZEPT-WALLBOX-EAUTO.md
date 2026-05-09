@@ -1,6 +1,6 @@
 # Konzept: Wallbox / E-Auto — Datenarchitektur
 
-> Status: Entwurf (2026-04-16) | Kein Issue, noch in Konzeptphase
+> **Status (2026-05-09): Konzept-Entwurf, Phase 1 (Pool-Bug Quick-Fix) ✅ ausgeliefert in v3.25.11** (getrennte Akkumulatoren EAuto/WB + Max-pro-Feld, siehe Memory `project_pool_fix_emob.md`). **Phase 2 (Vehicle-Sensor-Mapping) und Phase 3 (Multi-Fahrzeug-Dashboard) noch nicht angefangen** — in Roadmap [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) als „Ideen / Konzeptphase"-Item. Folge-Pfade `cockpit/uebersicht.py` + `_aggregate`-Pfad in v3.25.11 bewusst offen gelassen, sollen mit Phase 2 zusammen angepackt werden.
 
 ## Motivation
 

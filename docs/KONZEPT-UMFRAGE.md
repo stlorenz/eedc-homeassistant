@@ -1,11 +1,12 @@
 # EEDC Community-Umfrage — Konzept
 
-## Status
+## Status (2026-05-09)
 
 **Zurückgestellt** bis > 30 geteilte Anlagen erreicht sind.
 
-- Aktuell (2026-04-04): 19 geteilte Anlagen, ~59 unique Clones/Tag
+- Letzter dokumentierter Stand (2026-04-04): 19 geteilte Anlagen, ~59 unique Clones/Tag
 - Ursprüngliche Schwelle war 100 — auf 30 reduziert, da Early-Adopter-Feedback repräsentativ genug ist
+- **Nächster Schritt vor Aktivierung:** aktuelle Anzahl geteilter Anlagen abrufen (Community-Server), bei ≥ 30 Forum-Post planen. Trigger-Check kann jederzeit erfolgen, blockiert nichts in der laufenden Roadmap.
 
 ## Plattform
 

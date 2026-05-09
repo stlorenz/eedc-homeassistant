@@ -1,5 +1,7 @@
 # Konzept: Energieprofil-Datenbestand (Etappe 1 Revision)
 
+> **Dokument-Stand 2026-05-09 (v3.26.7):** Header und Implementierungsstand wurden im Aufräum-Sprint nachgezogen. Die ursprüngliche Konzept-Doku von 2026-03 ist größtenteils umgesetzt — die unteren Sektionen (Implementierungsschritte Phase A, Schritt 1–8) sind **historisch**. Aktueller Stufenplan und laufende Etappen werden in der Auto-Memory unter `project_energieprofil_roadmap.md` und in Roadmap-Issue [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) gepflegt.
+
 ## Ausgangslage und Motivation
 
 Das Energieprofil wurde in v3.1.x als Etappe 1 eingeführt mit dem Ziel, einen persönlichen
@@ -13,15 +15,25 @@ identifiziert, die eine Revision von Etappe 1 notwendig machen, **bevor** mit Et
 
 ---
 
-## Implementierungsstand (Stand v3.12.0)
+## Implementierungsstand (Stand 2026-05-09 / v3.26.7)
 
 | Etappe | Inhalt | Status |
 |---|---|---|
 | **Etappe 1** | Datenbestand aufbauen (Revision + Scheduler) | ✅ v3.1.x / v3.9.0 |
 | **Etappe 2** | Tagesdetail + Wochenvergleich | ✅ v3.11.0 |
-| **Backfill** | Vollbackfill aus HA Long-Term Statistics | ✅ v3.12.x (heute) |
-| **Etappe 3** | Monatsauswertung (Heatmap, PR-Trend, Batterie-Zyklen) | ⏳ nächster Sprint |
-| **Etappe 4** | Saisonale Muster | ⏳ später |
+| **Backfill** | Vollbackfill aus HA Long-Term Statistics | ✅ v3.12.x |
+| **Etappe 3** | Monatsauswertung (Heatmap, PR-Trend, Batterie-Zyklen) | ✅ v3.13.0 |
+| **Etappe 3b** | Verbrauchsprognose Phase A (Wochenmuster + Batterie-SoC-Sim) | ✅ v3.16.16 |
+| **Snapshot-Rework** | kWh aus W-Integration → kumulative Zähler-Snapshots | ✅ v3.19.0 (#135) |
+| **Slot-Konvention + GTI** | Backward-Konvention, lineare Interpolation, GTI für PR | ✅ v3.20.0 (#144 + #145 + #139) |
+| **Pro-Tag-Reaggregation + `:55`-Preview + Tage-Tabelle** | Selbsthilfe-Knopf, neue `<CollapsibleSection>` | ✅ v3.21.0 (#146 + #148) |
+| **Reload-Self-Healing** | Counter-Boundary + „Nur neu rechnen"-Pfad | ✅ v3.26.6 |
+| **Etappe 3c** | Architektur-Konsolidierung Read-/Write-Pfade (Slot-Konvention typisieren, Tagesgesamt = Σ Hourly, Snapshot-Quellen-Tracking, Resnap/Aggregat trennen) | ⏳ Sprint 2 |
+| **Etappe 3d** | Daten-Provenance & Reparatur-Architektur (Quellen-Hierarchie, Konflikt-Resolver, Reparatur-Orchestrator) | ⏳ Konzept-Phase nach 3c |
+| **Etappe 4** | Saisonale Muster (Sommer/Winter, Jahresvergleich, Autarkie-Verlauf) | ⏳ Voraussetzung 6–12 Monate Daten + 3c fertig |
+| **Etappe 5** | Speicher-Dimensionierung (Was-wäre-wenn) | ⏳ verbunden mit #142 |
+
+> Mangel 2 (Batterie-Datenqualität via Power-Trapez) ist mit dem Snapshot-Rework v3.19.0 strukturell aufgelöst — Stunden-kWh wird heute aus kumulativen Counter-Snapshots gerechnet. Die unten beschriebene Lösung (kWh-Sensoren aus Monatsabschluss-Mapping) wurde nicht so umgesetzt, sondern durch den globalen Snapshot-Pfad ersetzt.
 
 ---
 

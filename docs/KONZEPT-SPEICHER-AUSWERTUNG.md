@@ -1,6 +1,8 @@
 # Konzept: Auswertung PV-Speicher
 
-> Status: Entwurf (2026-04-28) | Issue [#142](https://github.com/supernova1963/eedc-homeassistant/issues/142) | Zugehörig: [#101](https://github.com/supernova1963/eedc-homeassistant/issues/101) (Live-Restzeit), [Energieprofil Etappe 4](https://github.com/supernova1963/eedc-homeassistant/issues/110) (Saison)
+> **Status (2026-05-09): Konzept-Entwurf**, noch nicht implementiert. In Roadmap [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) als „Geplant" geführt — sinnvoll in Verbindung mit Etappe 5 Speicher-Simulation. **Trigger zur Umsetzung:** rapahl ist Issue-Author (#142, „waiting"-Label), aktuell wartet das Item auf Sprint-Kapazität nach Etappe 3c/3d-Konsolidierung. Datenbasis (Monatsdaten + TagesEnergieProfil + Investitions-Parameter) ist seit v3.19.0–v3.21.0 vollständig vorhanden.
+>
+> Zugehörig: [#101](https://github.com/supernova1963/eedc-homeassistant/issues/101) (Live-Restzeit), [Energieprofil Etappe 4](https://github.com/supernova1963/eedc-homeassistant/issues/110) (Saison)
 
 ## Motivation
 

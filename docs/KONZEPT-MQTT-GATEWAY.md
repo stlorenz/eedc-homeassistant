@@ -1,15 +1,15 @@
 # Konzept: MQTT Gateway — Topic-Translator für EEDC
 
-> Erstellt: 2026-03-20 | Aktualisiert: 2026-03-22 | Status: **Stufe 0+1 implementiert** (v3.4.5)
+> Erstellt: 2026-03-20 | Aktualisiert: 2026-05-09 | Status: **Stufe 0+1+2 implementiert** (v3.4.5–v3.10.5)
 
 ## Implementierungsstand
 
 | Stufe | Status | Version | Beschreibung |
 |-------|--------|---------|-------------|
-| **Stufe 0** | **Implementiert** | v3.4.5 | Connector → MQTT Bridge. Konfigurierte Geräte-Connectors publishen automatisch Live-Watt auf MQTT-Inbound-Topics. 5 Connectors mit `read_live()`: Shelly 3EM, OpenDTU, Fronius, sonnenBatterie, go-eCharger. SMA/Kostal/Tasmota SML nur kWh (kein Live). |
-| **Stufe 1** | **Implementiert** | v3.4.5 | Manuelles Topic-Mapping (MVP). DB-Modell, CRUD-API, Hot-Reload, Test-Topic-Endpoint, UI auf MQTT-Inbound-Seite. Payload-Transformation: Plain/JSON/Array, Faktor, Offset, Invertierung. |
-| **Stufe 2** | Offen | — | Geräte-Presets (Shelly, OpenDTU, Tasmota, go-eCharger, SMA, Fronius, Zigbee2MQTT, Victron). 3 Klicks statt manueller Konfiguration. |
-| **Stufe 3** | Offen | — | Topic-Discovery. Temporär auf `#` subscriben, Pattern-Erkennung, Mapping-Vorschläge. |
+| **Stufe 0** | ✅ Implementiert | v3.4.5 | Connector → MQTT Bridge. Konfigurierte Geräte-Connectors publishen automatisch Live-Watt auf MQTT-Inbound-Topics. 5 Connectors mit `read_live()`: Shelly 3EM, OpenDTU, Fronius, sonnenBatterie, go-eCharger. SMA/Kostal/Tasmota SML nur kWh (kein Live). |
+| **Stufe 1** | ✅ Implementiert | v3.4.5 | Manuelles Topic-Mapping (MVP). DB-Modell, CRUD-API, Hot-Reload, Test-Topic-Endpoint, UI auf MQTT-Inbound-Seite. Payload-Transformation: Plain/JSON/Array, Faktor, Offset, Invertierung. |
+| **Stufe 2** | ✅ Implementiert | v3.10.5 | Geräte-Presets (Commits d64d8d6f + d29b5662). 3 Klicks statt manueller Konfiguration. Konkrete Preset-Liste in `mqtt_presets.py` zu prüfen, falls neuere Geräte ergänzt wurden. |
+| **Stufe 3** | ⏳ Offen | — | Topic-Discovery. Temporär auf `#` subscriben, Pattern-Erkennung, Mapping-Vorschläge. Trigger: konkreter User-Wunsch (bisher keiner). |
 
 ### Implementierte Dateien
 
