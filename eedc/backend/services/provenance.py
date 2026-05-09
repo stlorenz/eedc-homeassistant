@@ -1,9 +1,11 @@
 """
-Provenance-Helper für Aggregat-Schreib-Pfade (Etappe 3d Päckchen 1).
+Provenance-Helper für Aggregat-Schreib-Pfade (Etappe 3d Päckchen 1 + 2).
 
-Single-Source-of-Truth-Funktion: alle Schreiber auf monatsdaten /
+Single-Source-of-Truth-Funktionen: alle Schreiber auf monatsdaten /
 investition_monatsdaten / tages_zusammenfassung / tages_energie_profil
-gehen ab Päckchen 3 ausschließlich über `write_with_provenance()`.
+gehen ab Päckchen 3 ausschließlich über `write_with_provenance()` bzw.
+`write_json_subkey_with_provenance()` (für JSON-Sub-Keys wie in
+`InvestitionMonatsdaten.verbrauch_daten`).
 
 Verantwortlichkeiten:
 1. Hierarchie-Check (SourcePriority) — höhere/gleiche Priorität schreibt,
@@ -84,6 +86,123 @@ def _json_safe(value: Any) -> Optional[str]:
         return str(value)
 
 
+def _decide(
+    *,
+    existing: Optional[dict[str, Any]],
+    new_priority: SourcePriority,
+    effective_source: str,
+    old_value: Any,
+    new_value: Any,
+    input_hash: Optional[str],
+    force_override: bool,
+    writer: str,
+) -> tuple[Decision, str, Optional[str]]:
+    """Hierarchie-Entscheidung. Reine Funktion ohne Seiteneffekte.
+
+    Returns (decision, decision_reason, conflicting_source).
+    """
+    if force_override:
+        return ("applied", f"force_override (writer={writer})", None)
+
+    if existing is None:
+        return ("applied", "initial_write", None)
+
+    existing_source = existing.get("source", "")
+    existing_priority = SOURCE_LABELS.get(existing_source)
+    existing_hash = existing.get("input_hash")
+
+    # No-Op-Detection: gleicher Wert + gleicher Input-Hash heißt
+    # idempotenter Re-Import. Spart Audit-Log-Spam bei vollem No-Op,
+    # dokumentiert aber den Aufruf trotzdem (Diagnose: „liefert der
+    # Cloud-Sync was Neues oder nicht?").
+    if (
+        input_hash is not None
+        and existing_hash == input_hash
+        and old_value == new_value
+    ):
+        return (
+            "no_op_same_value",
+            f"identical value + input_hash from {effective_source}",
+            existing_source,
+        )
+
+    # Höhere oder gleiche Priorität → schreibt. Niedrigere Zahl =
+    # höhere Priorität (siehe SourcePriority IntEnum).
+    if existing_priority is None:
+        # Bestehende Source kennen wir nicht (Legacy-Daten ohne Provenance,
+        # oder Vokabular-Drift). Nicht stilles Fallback — wir schreiben,
+        # aber die Decision-Reason macht das Audit-Log diagnose-bar.
+        return (
+            "applied",
+            f"existing source {existing_source!r} unknown to SOURCE_LABELS — applied as fallback",
+            existing_source,
+        )
+
+    if new_priority < existing_priority:
+        return (
+            "applied",
+            f"priority {int(new_priority)} < existing {existing_source} ({int(existing_priority)})",
+            None,
+        )
+
+    if new_priority == existing_priority:
+        return (
+            "applied",
+            f"priority {int(new_priority)} == existing {existing_source} ({int(existing_priority)}) — last writer wins",
+            None,
+        )
+
+    # new_priority > existing_priority → niedrigere Priorität, abweisen.
+    return (
+        "rejected_lower_priority",
+        f"priority {int(new_priority)} > existing {existing_source} ({int(existing_priority)}) — protected",
+        existing_source,
+    )
+
+
+def _make_audit_entry(
+    *,
+    obj: Any,
+    provenance_key: str,
+    effective_source: str,
+    writer: str,
+    old_value: Any,
+    new_value: Any,
+    input_hash: Optional[str],
+    decision: Decision,
+    decision_reason: str,
+) -> DataProvenanceLog:
+    """Erzeugt den Audit-Log-Eintrag (Append-Only)."""
+    return DataProvenanceLog(
+        table_name=obj.__tablename__,
+        row_pk_json=_row_pk_json(obj),
+        field_name=provenance_key,
+        source=effective_source,
+        writer=writer,
+        old_value=_json_safe(old_value),
+        new_value=_json_safe(new_value),
+        input_hash=input_hash,
+        decision=decision,
+        decision_reason=decision_reason,
+    )
+
+
+def _provenance_entry(
+    effective_source: str,
+    writer: str,
+    input_hash: Optional[str],
+) -> dict[str, Any]:
+    """Baut den source_provenance-Eintrag pro Feld."""
+    entry: dict[str, Any] = {
+        "source": effective_source,
+        "writer": writer,
+        "at": datetime.utcnow().isoformat() + "Z",
+    }
+    if input_hash is not None:
+        entry["input_hash"] = input_hash
+    return entry
+
+
 async def write_with_provenance(
     db: AsyncSession,
     obj: Any,
@@ -95,7 +214,7 @@ async def write_with_provenance(
     *,
     force_override: bool = False,
 ) -> WriteResult:
-    """Atomarer Aggregat-Write mit Hierarchie-Check, No-Op-Detection,
+    """Atomarer Top-Level-Write mit Hierarchie-Check, No-Op-Detection,
     JSON-Provenance-Update und Append-Only Audit-Log.
 
     Args:
@@ -105,124 +224,119 @@ async def write_with_provenance(
             TagesZusammenfassung | TagesEnergieProfil).
         field: Spaltenname auf obj, z. B. "netzbezug_kwh".
         value: Neuer Wert.
-        source: Label aus SOURCE_LABELS (z. B. "manual:form",
-            "external:cloud_import:fronius_solarweb"). KeyError wenn unbekannt.
-        writer: Identität des Schreibers (User-Email, Service-Name,
-            Cloud-Account-ID, Operation-ID bei repair).
+        source: Label aus SOURCE_LABELS. KeyError wenn unbekannt.
+        writer: Identität des Schreibers.
         input_hash: Optional, für No-Op-Detection bei idempotenten Re-Imports.
         force_override: NUR Repair-Orchestrator. Durchbricht Hierarchie,
-            schreibt Source als "repair" — egal was als source-Argument kam.
-            decision_reason im Audit-Log dokumentiert die Begründung.
+            schreibt Source als "repair".
 
-    Returns:
-        WriteResult mit decision-Feld:
-        - "applied": Wert geschrieben + Provenance + Audit-Log.
-        - "rejected_lower_priority": niedrigere Priorität gegen bestehende —
-          weder Wert noch Provenance angefasst, Audit-Log dokumentiert die
-          Abweisung mit conflicting_source.
-        - "no_op_same_value": identischer Wert + identischer input_hash —
-          weder Wert noch Provenance angefasst, Audit-Log dokumentiert No-Op.
+    Für Schreiber auf JSON-Sub-Keys (wie InvestitionMonatsdaten.verbrauch_daten)
+    siehe `write_json_subkey_with_provenance()`.
     """
-    # 1. Source-Auflösung. Bei force_override wird die effektive Source auf
-    #    "repair" überschrieben — das macht repair-Läufe im Audit-Log auf den
-    #    ersten Blick erkennbar.
-    if force_override:
-        effective_source = "repair"
-    else:
-        effective_source = source
-
-    # KeyError-Stoppschuss: unbekannte Labels werden nicht stillschweigend
-    # akzeptiert (Memory-Linie feedback_silent_except_logs.md).
+    effective_source = "repair" if force_override else source
     new_priority = SOURCE_LABELS[effective_source]
 
-    # 2. Bestehende Provenance lesen (defensiv: kann auf Bestandsdaten None sein).
     provenance: dict[str, Any] = obj.source_provenance or {}
     existing = provenance.get(field)
     old_value = getattr(obj, field, None)
 
-    # 3. Entscheidungsbaum.
-    decision: Decision
-    decision_reason: str
-    conflicting_source: Optional[str] = None
+    decision, decision_reason, conflicting_source = _decide(
+        existing=existing,
+        new_priority=new_priority,
+        effective_source=effective_source,
+        old_value=old_value,
+        new_value=value,
+        input_hash=input_hash,
+        force_override=force_override,
+        writer=writer,
+    )
 
-    if force_override:
-        # Repair-Operation — durchbricht alles.
-        decision = "applied"
-        decision_reason = f"force_override (writer={writer})"
-
-    elif existing is None:
-        # Initial-Write: noch nie was an dieses Feld geschrieben worden.
-        decision = "applied"
-        decision_reason = "initial_write"
-
-    else:
-        existing_source = existing.get("source", "")
-        existing_priority = SOURCE_LABELS.get(existing_source)
-        existing_hash = existing.get("input_hash")
-
-        # 3a. No-Op-Detection: gleicher Wert + gleicher Input-Hash heißt
-        #     idempotenter Re-Import. Spart sowohl flag_modified als auch
-        #     Audit-Log-Spam, dokumentiert aber den Aufruf trotzdem (P2-
-        #     Diagnose: „liefert der Cloud-Sync was Neues oder nicht?").
-        if (
-            input_hash is not None
-            and existing_hash == input_hash
-            and old_value == value
-        ):
-            decision = "no_op_same_value"
-            decision_reason = f"identical value + input_hash from {effective_source}"
-            conflicting_source = existing_source
-
-        # 3b. Höhere oder gleiche Priorität → schreibt. Niedrigere Zahl =
-        #     höhere Priorität (siehe SourcePriority IntEnum).
-        elif existing_priority is None or new_priority <= existing_priority:
-            decision = "applied"
-            decision_reason = (
-                f"priority {int(new_priority)} {'≤' if new_priority < existing_priority else '='} "
-                f"existing {existing_source} ({int(existing_priority)})"
-                if existing_priority is not None
-                else f"existing source {existing_source!r} unknown to SOURCE_LABELS — applied as fallback"
-            )
-
-        # 3c. Niedrigere Priorität → abweisen.
-        else:
-            decision = "rejected_lower_priority"
-            conflicting_source = existing_source
-            decision_reason = (
-                f"priority {int(new_priority)} > existing {existing_source} "
-                f"({int(existing_priority)}) — protected"
-            )
-
-    # 4. Mutationen anwenden, wenn applied.
     if decision == "applied":
         setattr(obj, field, value)
-        provenance[field] = {
-            "source": effective_source,
-            "writer": writer,
-            "at": datetime.utcnow().isoformat() + "Z",
-        }
-        if input_hash is not None:
-            provenance[field]["input_hash"] = input_hash
+        provenance[field] = _provenance_entry(effective_source, writer, input_hash)
         obj.source_provenance = provenance
-        # JSON-Falle: ohne flag_modified persistiert SQLAlchemy die Mutation NICHT
-        # (CLAUDE.md Code-Patterns).
         flag_modified(obj, "source_provenance")
 
-    # 5. Audit-Log eintragen — auch bei rejected/no_op, das ist der Diagnose-Wert.
     new_value_for_log = value if decision == "applied" else old_value
-    log_entry = DataProvenanceLog(
-        table_name=obj.__tablename__,
-        row_pk_json=_row_pk_json(obj),
-        field_name=field,
-        source=effective_source,
-        writer=writer,
-        old_value=_json_safe(old_value),
-        new_value=_json_safe(new_value_for_log),
-        input_hash=input_hash,
+    db.add(_make_audit_entry(
+        obj=obj, provenance_key=field, effective_source=effective_source,
+        writer=writer, old_value=old_value, new_value=new_value_for_log,
+        input_hash=input_hash, decision=decision, decision_reason=decision_reason,
+    ))
+
+    return WriteResult(
+        applied=(decision == "applied"),
         decision=decision,
-        decision_reason=decision_reason,
+        reason=decision_reason,
+        conflicting_source=conflicting_source,
     )
-    db.add(log_entry)
+
+
+async def write_json_subkey_with_provenance(
+    db: AsyncSession,
+    obj: Any,
+    json_attr: str,
+    sub_key: str,
+    value: Any,
+    source: str,
+    writer: str,
+    input_hash: Optional[str] = None,
+    *,
+    force_override: bool = False,
+) -> WriteResult:
+    """Per-JSON-Sub-Key-Variante von write_with_provenance.
+
+    Anwendung: InvestitionMonatsdaten.verbrauch_daten ist ein JSON-Dict
+    (z. B. {"km_gefahren": 1200, "ladung_kwh": 130, ...}). Provenance soll
+    pro Sub-Key getrennt geführt werden, damit ein Cloud-Sync den Sub-Key
+    `km_gefahren` nicht überschreibt, wenn der User ihn manuell gepflegt hat —
+    während er andere Sub-Keys legitim aktualisiert.
+
+    Implementierung: provenance_key wird `f"{json_attr}.{sub_key}"`,
+    z. B. `"verbrauch_daten.ladung_kwh"`. Mutation findet auf dem
+    JSON-Dict-Eintrag statt (mit flag_modified auf json_attr).
+
+    Args:
+        json_attr: Name der JSON-Spalte auf obj (z. B. "verbrauch_daten").
+        sub_key: Schlüssel im Dict (z. B. "ladung_kwh").
+        Restliche Args wie write_with_provenance.
+    """
+    effective_source = "repair" if force_override else source
+    new_priority = SOURCE_LABELS[effective_source]
+
+    provenance_key = f"{json_attr}.{sub_key}"
+    provenance: dict[str, Any] = obj.source_provenance or {}
+    existing = provenance.get(provenance_key)
+
+    json_dict: dict[str, Any] = dict(getattr(obj, json_attr) or {})
+    old_value = json_dict.get(sub_key)
+
+    decision, decision_reason, conflicting_source = _decide(
+        existing=existing,
+        new_priority=new_priority,
+        effective_source=effective_source,
+        old_value=old_value,
+        new_value=value,
+        input_hash=input_hash,
+        force_override=force_override,
+        writer=writer,
+    )
+
+    if decision == "applied":
+        json_dict[sub_key] = value
+        setattr(obj, json_attr, json_dict)
+        flag_modified(obj, json_attr)
+
+        provenance[provenance_key] = _provenance_entry(effective_source, writer, input_hash)
+        obj.source_provenance = provenance
+        flag_modified(obj, "source_provenance")
+
+    new_value_for_log = value if decision == "applied" else old_value
+    db.add(_make_audit_entry(
+        obj=obj, provenance_key=provenance_key, effective_source=effective_source,
+        writer=writer, old_value=old_value, new_value=new_value_for_log,
+        input_hash=input_hash, decision=decision, decision_reason=decision_reason,
+    ))
 
     return WriteResult(
         applied=(decision == "applied"),
