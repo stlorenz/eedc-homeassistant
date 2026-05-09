@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react'
-import { Download, Upload, Check, FileJson, HardDrive, AlertTriangle, Info } from 'lucide-react'
+import { Download, Upload, Check, FileJson, AlertTriangle, Info } from 'lucide-react'
 import { Button, Alert, Card, LoadingSpinner } from '../components/ui'
 import { DataLoadingState } from '../components/common'
 import { useSelectedAnlage } from '../hooks'
@@ -93,13 +93,6 @@ export default function Backup() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <HardDrive className="w-6 h-6 text-gray-500" />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Backup & Restore
-        </h1>
-      </div>
-
       <p className="text-gray-500 dark:text-gray-400">
         Exportiere die Konfiguration deiner Anlage (Stammdaten, Investitionen, Monatsdaten,
         Strompreise, PVGIS-Prognosen) als JSON oder stelle eine Anlage aus einem Export wieder her.

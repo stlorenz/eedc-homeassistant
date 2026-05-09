@@ -157,10 +157,6 @@ export default function LiveDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-            Live-Daten
-          </h1>
           {/* Pulsierender Punkt */}
           {data?.verfuegbar && (
             <span className="relative flex h-3 w-3">
