@@ -94,9 +94,6 @@ export default function Einrichtung() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Datenquellen einrichten
-        </h1>
         <p className="mt-1 text-gray-600 dark:text-gray-400">
           Richte deine Datenquellen ein, um Monatswerte automatisch oder per Import zu erfassen.
         </p>
