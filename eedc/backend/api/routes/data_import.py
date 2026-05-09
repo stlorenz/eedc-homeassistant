@@ -29,6 +29,7 @@ from backend.api.routes.import_export.helpers import (
     _distribute_legacy_battery_to_storages,
 )
 from backend.services.activity_service import log_activity
+from backend.services.provenance import write_with_provenance
 
 logger = logging.getLogger(__name__)
 
@@ -386,18 +387,31 @@ async def apply_import(
                 bat_entladung = bat_entladung_raw
 
             # ── Monatsdaten schreiben ─────────────────────────────────────────
-            if monat_input.einspeisung_kwh is not None:
-                md.einspeisung_kwh = monat_input.einspeisung_kwh
-            if monat_input.netzbezug_kwh is not None:
-                md.netzbezug_kwh = monat_input.netzbezug_kwh
-            if monat_input.eigenverbrauch_kwh is not None:
-                md.eigenverbrauch_kwh = monat_input.eigenverbrauch_kwh
-            if pv_erzeugung is not None:
-                md.pv_erzeugung_kwh = pv_erzeugung
-            if bat_ladung is not None:
-                md.batterie_ladung_kwh = bat_ladung
-            if bat_entladung is not None:
-                md.batterie_entladung_kwh = bat_entladung
+            # Top-Level-Felder gehen über write_with_provenance, damit manuell
+            # gepflegte Form-Werte (manual:form, MANUAL) gegen den
+            # external:portal_import-Schreiber (EXTERNAL_AUTHORITATIVE) geschützt
+            # sind. Frische Rows (existing_md None) sind initial_write → applied.
+            if md.id is None:
+                # Frisch via db.add(md) — flush damit md.id existiert + Provenance
+                # später flag_modified greifen kann.
+                await db.flush()
+
+            top_level_writes: list[tuple[str, Optional[float]]] = [
+                ("einspeisung_kwh", monat_input.einspeisung_kwh),
+                ("netzbezug_kwh", monat_input.netzbezug_kwh),
+                ("eigenverbrauch_kwh", monat_input.eigenverbrauch_kwh),
+                ("pv_erzeugung_kwh", pv_erzeugung),
+                ("batterie_ladung_kwh", bat_ladung),
+                ("batterie_entladung_kwh", bat_entladung),
+            ]
+            for field_name, value in top_level_writes:
+                if value is not None:
+                    await write_with_provenance(
+                        db, md, field_name, value,
+                        source=_PROVENANCE_SOURCE, writer=_PROVENANCE_WRITER,
+                    )
+            # datenquelle ist Pre-Provenance-Spalte — bleibt direkt gesetzt
+            # (sie ist nicht Teil der Hierarchie-Logik und nutzt source_provenance nicht).
             md.datenquelle = datenquelle
 
             # ── Wallbox ───────────────────────────────────────────────────────
