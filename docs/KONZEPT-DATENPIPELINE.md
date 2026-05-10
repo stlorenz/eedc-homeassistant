@@ -534,13 +534,17 @@ Slice-Schnitte werden so gewählt, dass die Provenance-Integration danach **eine
 - **Verhalten unverändert:** Refactoring-PR ist reines Verschieben + Re-Export, alle Tests grün, kein Verhaltens-Diff. CI-Smoke + manueller Round-Trip in HA-Add-on.
 - **Keine spekulativen Slices:** ein Slice pro Verantwortlichkeit, die heute schon im File existiert. Nicht „könnte mal jemand brauchen". Memory-Linie `feedback_pfadabhaengigkeits_reflex.md` gilt auch hier.
 
-### 7.4 Pragma-verschobene Refactoring-Tails (Stand 2026-05-09)
+### 7.4 Pragma-verschobene Refactoring-Tails — ✅ ALLE AUSGELIEFERT 2026-05-10 (3d-Etappenabschluss-Sprint)
 
-Drei Refactoring-Tails aus dem Päckchen-3-Plan wurden bewusst **nicht** mit ausgeliefert, weil sie keinen Provenance-Bezug haben und der Aufräum-Sprint im 3d-Bündel sonst zur Refactoring-Orgie geworden wäre (Memory-Linie `feedback_release_bundling.md`):
+Drei Refactoring-Tails aus dem Päckchen-3-Plan wurden im P4-Bündel bewusst **nicht** mit ausgeliefert (Memory-Linie `feedback_release_bundling.md`); sie sind im 3d-Etappenabschluss-Sprint nachgezogen worden:
 
-- **`routes/monatsabschluss.py` Routes-Zerlegung in `wizard.py` / `views.py`** — die Auto-Aggregations-Logik ist mit Commit `4d52e65b` bereits in `services/monatsabschluss_aggregator.py` ausgelagert. Was im Route-File bleibt, sind Read-Endpoints + Wizard-Save-Pfad — beide bereits auf `write_with_provenance(manual:form)` (Commit `7702902c`). Eigener Sprint, kein P4-Blocker.
-- **`routes/custom_import.py` Routes-Zerlegung** in `analyze.py` / `preview.py` / `apply.py` / `templates.py` — der DB-Schreib-Pfad geht bereits über den gemeinsamen `services/import_writer.py`-Provenance-Wrapper (P2). Eigener Sprint, kein P4-Blocker.
-- **`services/energie_profil_service.py` Helper-Auslagerung** — die internen `_get_*`-Helper für Wetter/SoC/Strompreis sind die einzigen verbleibenden Insassen des Backbones (von 1224 → 360 Zeilen reduziert mit Commit `6fbf74da`). Folge-Refactor ohne strukturellen Auslöser.
+- ✅ **`routes/monatsabschluss.py` (1078 Z) → Paket `monatsabschluss/views.py` + `wizard.py` + `_shared.py` + `__init__.py`** (Commit `3a263366`). Read-Endpoints und Wizard-Save-Pfad sind sauber getrennt, beide schreiben weiterhin über `write_with_provenance(manual:form)` (Commit `7702902c`). Routen-Inventar 217 unverändert.
+- ✅ **`routes/custom_import.py` (1102 Z) → Paket `custom_import/analyze.py` + `preview.py` + `apply.py` + `templates.py` + `_shared.py` + `__init__.py`** (Commit `70ccccb5`). Apply-Pfad geht weiter über `services/import_writer.py`-Provenance-Wrapper (P2).
+- ✅ **`services/energie_profil_service.py` Helper-Auslagerung in `services/energie_profil/_helpers.py`** (Commit `a77a8a52`). `_get_wetter_ist`, `_get_soc_history`, `_get_strompreis_stunden`, `_tage_zurueck` und die `StrompreisStunden`-Datenklasse sind aus dem Backbone (zuvor 360 Z) ins Sub-Paket verlegt; `services/energie_profil_service.py` bleibt als ~46 Z dünne Re-Export-Fassade für externe Importer (`repair_orchestrator`, `scheduler`). Lazy-Importe in `aggregator.py` und `backfill.py` zeigen jetzt direkt auf `_helpers.py` — der zirkuläre Re-Export-Workaround entfällt.
+
+Außer Reihe ebenfalls in dieser Phase: **Pool-Bug-Konsistenz-Patch** in `cockpit/uebersicht.py` und `aktueller_monat._aggregate` (Commit `7c0a077b`) — Quick-Fix-Pattern aus Commit `92d522a8` auf zwei Drift-Stellen ausgerollt (siehe `project_pool_fix_emob.md` für Hintergrund).
+
+Alle Patches: App-Boot 217 Routes identisch, **31 Akzeptanz-Tests grün** (10 Provenance + 7 ImportWriter + 6 ProvenanceMigrate + 8 RepairOrchestrator).
 
 ## 8. Migrations-Roadmap
 
