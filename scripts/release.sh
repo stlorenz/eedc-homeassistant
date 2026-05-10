@@ -132,6 +132,18 @@ if ! grep -qE "^## v${MAJOR_MINOR}[. ]" docs/WAS-IST-NEU.md 2>/dev/null; then
     fi
 fi
 
+# Smoke-Check: App-Boot + 31 Akzeptanz-Tests grün?
+# Läuft VOR Version-Bump, damit ein roter Test nichts an den Versionsdateien
+# anfasst. Bei Fehler hartes Abbrechen — kein Skip-Override.
+echo ""
+echo -e "${CYAN}Pre-Release-Smoke-Check...${NC}"
+if ! "$REPO_DIR/scripts/smoke.sh" >/dev/null 2>&1; then
+    echo -e "${RED}Fehler: Smoke-Check fehlgeschlagen.${NC}"
+    echo -e "${YELLOW}  Detail: $REPO_DIR/scripts/smoke.sh ausführen.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}  Smoke OK.${NC}"
+
 # Aktuelle Version lesen
 CURRENT=$(grep -oP '(?<=APP_VERSION = ")[^"]*' eedc/backend/core/config.py)
 echo -e "  Aktuell:  ${YELLOW}$CURRENT${NC}"
