@@ -727,7 +727,14 @@ async def get_aktueller_monat(
         else:
             resolved[top_level_feld] = (resolved[top_level_feld][0] + val, quelle_info)
 
+    # #239 detLAN-Folge: HA-Statistics-/MQTT-Sensoren liefern Werte auch in
+    # Monaten vor Anschaffung der EEDC-Investition (Sensor existierte in HA
+    # schon vorher). Vor-Anschaffungs-/Nach-Stilllegungs-Monate hier
+    # rausfiltern, sonst tauchen WP-Werte (z.B. 145 kWh Strom für März bei
+    # Anschaffungsdatum April) im Monatsbericht auf.
     for inv in investitionen:
+        if not inv.ist_aktiv_im_monat(jahr, monat):
+            continue
         agg_map = typ_aggregation.get(inv.typ, {})
         for inv_suffix, top_level_feld in agg_map.items():
             _aggregate(top_level_feld, f"inv_{inv.id}_{inv_suffix}")
@@ -744,6 +751,10 @@ async def get_aktueller_monat(
         emob_quelle: Optional[tuple] = None
         for inv in investitionen:
             if (inv.parameter or {}).get("ist_dienstlich", False):
+                continue
+            # #239 detLAN-Folge: HA-Statistics-Werte aus vor-Anschaffungs-
+            # Monaten nicht in den Monatsbericht-Pool aggregieren.
+            if not inv.ist_aktiv_im_monat(jahr, monat):
                 continue
             if inv.typ == "e-auto":
                 for suffix in ("ladung_kwh", "verbrauch_kwh"):
