@@ -1975,9 +1975,9 @@ class DatenChecker:
                 meldung=f"… plus {rest} weitere Tag(e) mit Drift",
                 details=(
                     f"Anzeige auf die 20 Tage mit größtem |Δ| begrenzt. "
-                    f"Für alle Drift-Tage auf einmal: Wartung → Reparatur-Werkbank "
-                    f"→ Bereich neu aggregieren (Datumsbereich aktiv wählen, "
-                    f"keine automatische Sammel-Aktion)."
+                    f"Für alle Drift-Tage auf einmal: Einstellungen → Daten → "
+                    f"Energieprofil → Reparatur-Werkbank → Bereich neu aggregieren "
+                    f"(Datumsbereich aktiv wählen, keine automatische Sammel-Aktion)."
                 ),
             ))
 

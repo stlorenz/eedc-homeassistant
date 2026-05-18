@@ -78,7 +78,7 @@ Geprüft werden die **letzten 90 Tage**. Begründung:
 
 - Bei pathologischem Drift-Verhalten ist die Liste noch lesbar
 - Anwender bekommt zuerst die Tage zu sehen, deren Reparatur den größten Effekt hat
-- Fußnote in der Detail-Anzeige: *„20 Tage angezeigt; falls weitere existieren, hilft Wartung → Reparatur-Werkbank → Bereich neu aggregieren"*
+- Fußnote in der Detail-Anzeige: *„20 Tage angezeigt; falls weitere existieren, hilft Einstellungen → Daten → Energieprofil → Reparatur-Werkbank → Bereich neu aggregieren"*
 
 ## 3. Backend-Implementation
 
@@ -224,7 +224,7 @@ In `DatenChecker.tsx` (oder Sub-Komponente, je nach Datei-Struktur): pro `CheckE
 
 Unter der Liste der Drift-Einträge:
 
-> Mehrere Tage betroffen? Über *Wartung → Reparatur-Werkbank → Bereich neu aggregieren* kannst du einen Datumsbereich am Stück reparieren — bewusst getrennt von dieser Diagnose-Liste, damit nicht versehentlich Massen-Aktionen ausgelöst werden.
+> Mehrere Tage betroffen? Über *Einstellungen → Daten → Energieprofil → Reparatur-Werkbank → Bereich neu aggregieren* kannst du einen Datumsbereich am Stück reparieren — bewusst getrennt von dieser Diagnose-Liste, damit nicht versehentlich Massen-Aktionen ausgelöst werden.
 
 ## 5. Anti-Patterns explizit vermieden
 
@@ -317,7 +317,7 @@ Boundary-Rauschen wird unterdrückt, damit die Liste fokussiert bleibt.
 #### Mehrere Tage auf einmal
 
 Wenn du z. B. einen ganzen Monat reparieren willst, ist
-*Wartung → Reparatur-Werkbank → Bereich neu aggregieren* der schnellere
+*Einstellungen → Daten → Energieprofil → Reparatur-Werkbank → Bereich neu aggregieren* der schnellere
 Weg. Bewusst nicht als Massen-Knopf in der Diff-Liste — Massen-Aktionen
 sollen aktiv gewählt werden, nicht versehentlich passieren.
 ```
