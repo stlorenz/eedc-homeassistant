@@ -1,5 +1,7 @@
 # Konzept: Stündliche Strompreis-Mitschrift
 
+> **ARCHIVIERT (2026-05-19)** — Alle Phasen des Konzepts ausgeliefert. Phase 1 (stündliche Mitschrift Endpreis + Börsenpreis im `TagesEnergieProfil`) ✅ **v3.16.0**, Phase 2 (Monatsabschluss-Vorschlag: verbrauchsgewichteter Ø-Preis als Vorbelegung) ✅ **v3.30.1** (#250 stlorenz), Phase 3 (Tagesverlauf-Overlay) ✅ **v3.15.8**, §51-KPIs (Negativpreis-Aggregate) ✅ v3.16.x. Direkter API-Connector Tibber/aWATTar ist im Konzept explizit als „nicht Teil" abgegrenzt.
+
 > **Status (2026-05-09):** Phase 1 (stündliche Mitschrift Endpreis + Börsenpreis im `TagesEnergieProfil`) ✅ ausgeliefert in v3.16.0. Tagesverlauf-Overlay (Lese-Pfad) ✅ v3.15.8. §51-KPIs (Negativpreis-Aggregate) ✅ v3.16.x. **Offen:** Monatsabschluss-Vorschlag (verbrauchsgewichteter Ø-Preis als Vorbelegung) — Aufwand vs. Nutzen noch unklar (Wert muss ohnehin gegen Anbieter-Abrechnung geprüft werden), in Roadmap [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) als „In Arbeit / Nächster Sprint"-Item geführt. Phase-2 (direkter API-Connector Tibber/aWATTar) ist nicht angefasst.
 
 ## Motivation

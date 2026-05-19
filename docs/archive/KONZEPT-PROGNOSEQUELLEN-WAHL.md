@@ -1,5 +1,7 @@
 # Konzept: Prognosequellen-Wahl pro Anlage
 
+> **ARCHIVIERT (2026-05-19)** — Kern ausgeliefert in **v3.30.1** (2026-05-15, Commit 36419c28). Anlage.prognose_quelle (eedc/solcast/sfml) + Resolver + Auto-Discovery (Entity-ID-Pattern) + O12-Live-Switch + Frontend-Picker mit HA-Verfügbarkeits-Check + Quellen-Hinweis in Live-Ansichten + Solcast-Standalone-API-Token-UI. Tom-HA-Versprechen (kein Quellenvergleich) eingehalten — siehe `feedback_tom_ha_sfml_kein_vergleich`. Konzept-Doc als Architektur-Referenz erhalten.
+
 > **Strenger Grundsatz:** Diese Doku enthält **keinerlei Vergleich** zwischen
 > EEDC, Solcast und Tom-HA-SFML. Versprochen wurde explizit, nicht gegen
 > „rolling" zu vergleichen. Das Konzept beschreibt ausschließlich die

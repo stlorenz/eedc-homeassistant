@@ -1,5 +1,7 @@
 # Konzept Etappe 4 — HA-Statistics-LTS als Source-of-Truth
 
+> **ARCHIVIERT (2026-05-19)** — Vollständig ausgeliefert in **v3.31.0** (2026-05-17). HA-Statistics-LTS ist seit diesem Release Source-of-Truth für TagesEnergieProfil + TagesZusammenfassung im HA-Add-on-Modus. Σ Hourly = Daily per Konstruktion. Auto-Vollbackfill bei Upgrade additiv (manuelle Korrekturen bleiben). Drift-Sichtbarkeit + Per-Tag-Reparatur in der separat archivierten [`archive/KONZEPT-ETAPPE-6-DRIFT-ANZEIGE.md`](KONZEPT-ETAPPE-6-DRIFT-ANZEIGE.md) | Auslöser: Rainer-PN 2026-05-16 (drei Werte für 15.05.2026 PV).
+
 **Status:** Konzept-Phase, 2026-05-16
 **Ziel-Release:** v3.31.0 (Major-vs-Patch siehe Abschnitt 9)
 **Trigger:** Rainer-PN 2026-05-16 mit drei Werten für 15.05.2026 PV-Erzeugung (72,1 / 67 / 64,49 kWh) aus drei Berechnungspfaden.

@@ -1,5 +1,7 @@
 # Konzept: Infothek — Verträge, Zähler & Dokumentation
 
+> **ARCHIVIERT (2026-05-19)** — Vollständig ausgeliefert. Etappe 1+2 (Datenmodell, CRUD, Datei-Upload) in **v3.5.0**, Folge-Iteration N:M-Verknüpfung (Komponenten-Akte) in **v3.15.2**, Stamm-Felder-Aufräumung in **v3.16.2**. Konzept-Doc als Architektur-Referenz erhalten | Auslöser: Rainer (PN community.simon42.com #81931).
+
 > Erstellt: 2026-03-25 | **Status: ✅ vollständig in v3.5.0 ausgeliefert** | Folge-Iteration N:M-Verknüpfung in v3.15.2 (Komponenten-Akte) | Konzept-Doc als Architektur-Referenz erhalten | Auslöser: Rainer (PN community.simon42.com #81931)
 
 ## Implementierungsstand

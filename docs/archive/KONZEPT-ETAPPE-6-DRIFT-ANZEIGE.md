@@ -1,5 +1,7 @@
 # Konzept Etappe 6 — Datenquelle-Drift-Anzeige + Per-Tag-Reparatur
 
+> **ARCHIVIERT (2026-05-19)** — Vollständig ausgeliefert in **v3.31.1** (2026-05-17 Same-Day nach Etappe 4+5). Daten-Checker-Kategorie *„Datenquelle – Drift zu HA-Statistics"* zeigt die letzten 90 Tage mit Abweichung > 2 kWh AND > 5 %, max 20 Einträge, pro Eintrag „Tag reparieren"-Knopf. v3.31.2 Hotfix für Pydantic-Schema-Drift im action_kind-Feld. v3.31.3 Drift-Toast mit Vorher/Nachher-Werten verfeinert | Auslöser: Etappe 4 macht Drift architektonisch sichtbar, bestehende Tage brauchen Reparatur-Pfad.
+
 **Status:** Konzept-Phase, 2026-05-17 Abend
 **Ziel-Release:** v3.31.1 (Same-Day-Override gegen Bundling-Regel — siehe Abschnitt 8)
 **Trigger:** Etappe 4+5 macht die Drift architektonisch sichtbar (Σ Hourly = Daily per Konstruktion *für neue Tage*), aber bestehende Tage bleiben auf dem alten Mix-Source-Wert. Anwender brauchen ein Werkzeug, um zu sehen *welche* Tage betroffen sind und sie *gezielt* zu reparieren.

@@ -1,5 +1,7 @@
 # Konzept: EEDC-Lernfaktor — Optimierung und Korrekturprofile
 
+> **ARCHIVIERT (2026-05-19)** — Päckchen 1+2 ausgeliefert in **v3.26.0–v3.26.2** (Wetter-Layer + O1+O2-Doppel-Variante + stündliches Korrekturprofil mit Sonnenstand × Wetter im Live-Pfad). O12-Live-Switch (Default-Aktivierung) mit der Prognosequellen-Wahl in **v3.30.1** (2026-05-15). Variante A (Anlagenspezifisches Stunden-Korrekturprofil pro Saisonbin) bleibt reaktiv, Trigger sind Diagnose-Daten — nicht akut. Variante v1 archiviert in [`archive/KONZEPT-KORREKTURPROFIL-v1-2026-05-03.md`](KONZEPT-KORREKTURPROFIL-v1-2026-05-03.md).
+
 > **Status (2026-05-10):** Päckchen 1+2 (Wetter-Layer + O1+O2-Doppel-Variante + stündliches
 > Korrekturprofil mit Sonnenstand × Wetter im Live-Pfad) ✅ **ausgeliefert in v3.26.0–v3.26.2**
 > (Commits 06558529, 6fc92681). Skalar-Hotfix in v3.26.3, Wetter-Backfill-Hotfix v3.26.4.

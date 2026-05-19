@@ -1,5 +1,7 @@
 # Konzept: Architektur-Konsolidierung Energieprofil-Read-/Write-Pfade (Etappe 3c)
 
+> **RE-AUDIT NÖTIG (2026-05-19):** 3c-Kern wurde in **v3.26.8** ausgeliefert, danach kamen Etappe 3d (v3.27.0), Etappe 4+5 (v3.31.0) und Etappe 6 (v3.31.1) — die Drift-Befunde 1, 2, 3, 4b, 4c, 4d aus der Tabelle in Abschnitt 2 sind teilweise durch spätere Etappen erledigt oder obsolet. Vor weiterer Arbeit prüfen: welche Befunde sind nach v3.31.x noch akut? Falls keine mehr → archivieren. Falls noch welche → Status-Header aktualisieren und auf v3.32-Sprint einordnen.
+
 > **Status:** Konzept-Phase, Aufräum-Sprint Phase C+ (2026-05-09).
 > **Voraussetzung Implementierung:** keine — v3.26.6 (Reload-Self-Healing) hat Bug A („Folgetag-Boundary fehlt im Resnap-Range") und den „Nur neu rechnen"-Pfad bereits ausgeliefert. 3c liefert die strukturelle Konsolidierung darüber hinaus.
 > **Ziel:** Slot-Konvention im gesamten Code an die #144-Entscheidung angleichen, Tagesgesamt vs. Slot-Verteilung semantisch trennen, Snapshot-Quelle nachverfolgbar machen, UI-Trennung Resnap/Reaggregat explizit anbieten.

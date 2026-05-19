@@ -1,5 +1,7 @@
 # Konzept: MQTT Gateway — Topic-Translator für EEDC
 
+> **ARCHIVIERT (2026-05-19)** — Stufe 0+1+2 vollständig ausgeliefert in **v3.4.5–v3.10.5** (Connector-Bridge, manuelles Topic-Mapping, Geräte-Presets in 3 Klicks, 8 API-Endpoints, Hot-Reload). Stufe 3 (Topic-Discovery, Wildcard-Mappings, Preset-Registry) kein konkreter Anwender-Druck — bei Bedarf reaktiviert. Konzept-Doc als Architektur-Referenz erhalten | Erstellt 2026-03-20.
+
 > Erstellt: 2026-03-20 | Aktualisiert: 2026-05-09 | Status: **Stufe 0+1+2 implementiert** (v3.4.5–v3.10.5)
 
 ## Implementierungsstand
