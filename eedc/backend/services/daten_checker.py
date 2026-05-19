@@ -353,8 +353,9 @@ class DatenChecker:
 
         # Spezialtarife prüfen (WP / E-Auto)
         verwendungen = {s.verwendung for s in anlage.strompreise}
-        hat_wp = any(i.typ == "waermepumpe" and i.aktiv for i in anlage.investitionen)
-        hat_eauto = any(i.typ == "e-auto" and i.aktiv for i in anlage.investitionen)
+        heute = date.today()
+        hat_wp = any(i.typ == "waermepumpe" and i.ist_aktiv_an(heute) for i in anlage.investitionen)
+        hat_eauto = any(i.typ == "e-auto" and i.ist_aktiv_an(heute) for i in anlage.investitionen)
         if hat_wp and "waermepumpe" not in verwendungen:
             ergebnisse.append(CheckErgebnis(
                 kategorie=kat, schwere=CheckSeverity.INFO,
@@ -399,8 +400,12 @@ class DatenChecker:
         ergebnisse: list[CheckErgebnis] = []
         kat = CheckKategorie.INVESTITIONEN
 
-        # Reihenfolge nach Typ (#214 detLAN: WP vor Wallbox), nicht DB-ID
-        aktive = sort_investitionen_nach_typ(i for i in anlage.investitionen if i.aktiv)
+        # Reihenfolge nach Typ (#214 detLAN: WP vor Wallbox), nicht DB-ID.
+        # Stilllegungsdatum-Filter via `ist_aktiv_an` (#608 Sweep): stillgelegte
+        # Investitionen brauchen keine Stamm-Daten-Pflege mehr — Ausrichtung,
+        # kWp, Anschaffungskosten sind dann historisch fixiert oder irrelevant.
+        heute = date.today()
+        aktive = sort_investitionen_nach_typ(i for i in anlage.investitionen if i.ist_aktiv_an(heute))
         if not aktive:
             ergebnisse.append(CheckErgebnis(
                 kategorie=kat, schwere=CheckSeverity.INFO,
@@ -714,8 +719,11 @@ class DatenChecker:
         md_map = {(md.jahr, md.monat): md for md in monatsdaten}
         gesamt_kwp = anlage.leistung_kwp or 0
 
-        # Kontext: aktive Investitionstypen (für feldabhängige Checks)
-        aktive_typen = {i.typ for i in anlage.investitionen if i.aktiv}
+        # Kontext: aktive Investitionstypen (für feldabhängige Checks). Stilllegung
+        # respektieren — wenn der einzige Speicher stillgelegt ist, sollen
+        # Speicher-spezifische Plausibilitäts-Checks nicht mehr feuern.
+        heute_plaus = date.today()
+        aktive_typen = {i.typ for i in anlage.investitionen if i.ist_aktiv_an(heute_plaus)}
         hat_speicher = "speicher" in aktive_typen
 
         # Monate mit Speicher-Daten in InvestitionMonatsdaten (neuer Weg).
@@ -1666,13 +1674,21 @@ class DatenChecker:
         return monat_map
 
     def _get_pv_erzeugung_map(self, anlage: Anlage) -> dict[tuple[int, int], float]:
-        """Aggregiert PV-Erzeugung aus InvestitionMonatsdaten pro Monat."""
+        """Aggregiert PV-Erzeugung aus InvestitionMonatsdaten pro Monat.
+
+        Per-IMD-Lifecycle-Filter (#608-Sweep): historische IMDs aus dem
+        aktiven Zeitfenster der Investition zählen, Werte vor anschaffungs-
+        bzw. nach stilllegungsdatum nicht — Drift-Audit analog zu den anderen
+        Read-Sites (v3.29.0 #236).
+        """
         pv_map: dict[tuple[int, int], float] = {}
 
         for inv in anlage.investitionen:
             if inv.typ != "pv-module" or not inv.aktiv:
                 continue
             for imd in inv.monatsdaten:
+                if not inv.ist_aktiv_im_monat(imd.jahr, imd.monat):
+                    continue
                 data = imd.verbrauch_daten or {}
                 erzeugung = data.get("pv_erzeugung_kwh")
                 if erzeugung is not None:

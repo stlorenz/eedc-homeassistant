@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from backend.core.database import Base  # noqa: E402
 from backend.models import (  # noqa: E402, F401
-    Anlage, Investition,
+    Anlage, Investition, Strompreis,
 )
 
 
@@ -214,3 +214,124 @@ async def test_zukuenftig_stillgelegt_zaehlt_weiterhin():
         assert len(ok) == 1
         assert "10.0 kWp" in ok[0].meldung
         assert "2 Modul-Gruppen" in ok[0].meldung
+
+
+@pytest.mark.asyncio
+async def test_check_investitionen_ignoriert_stillgelegte_stammdaten():
+    """Stamm-Daten-Checks (kWp/Ausrichtung/Kosten fehlt) sollen nicht mehr
+    am stillgelegten Eintrag nörgeln — der Anwender hat die Komponente
+    abgehakt und braucht keine Vervollständigung."""
+    from backend.services.daten_checker import DatenChecker
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    async with _session_ctx() as db:
+        anlage = await _seed(db, total_kwp=10.0)
+        gestern = date.today() - timedelta(days=30)
+        # Aktiv und vollständig
+        _add_module(db, anlage.id, "Süd", 10.0, anschaffungsdatum=date(2024, 1, 1))
+        # Stillgelegt mit fehlender kWp + Ausrichtung — soll nicht mehr meckern
+        unvoll = Investition(
+            anlage_id=anlage.id, typ="pv-module",
+            bezeichnung="Ost (alt, lückenhaft)",
+            leistung_kwp=None,
+            anschaffungsdatum=date(2024, 1, 1),
+            stilllegungsdatum=gestern,
+            aktiv=True,
+        )
+        db.add(unvoll)
+        await db.commit()
+
+        anlage = (await db.execute(
+            select(Anlage).options(selectinload(Anlage.investitionen)).where(Anlage.id == anlage.id)
+        )).scalar_one()
+
+        checker = DatenChecker(db)
+        ergebnisse = checker._check_investitionen(anlage, monatsdaten=[])
+        nag = [r for r in ergebnisse if "Ost (alt" in r.meldung]
+        assert nag == [], (
+            f"Stamm-Daten-Hinweise zum stillgelegten Ost-Modul erwartet wären leer, "
+            f"fand: {[r.meldung for r in nag]}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_spezialtarif_nag_verschwindet_bei_stillgelegter_wp():
+    """Wenn die einzige WP stillgelegt ist, soll der Checker nicht mehr
+    den fehlenden WP-Spezialtarif anmahnen — die Komponente bezieht
+    keinen Strom mehr."""
+    from backend.services.daten_checker import DatenChecker
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    async with _session_ctx() as db:
+        anlage = await _seed(db, total_kwp=10.0)
+        gestern = date.today() - timedelta(days=30)
+        wp = Investition(
+            anlage_id=anlage.id, typ="waermepumpe",
+            bezeichnung="WP (außer Betrieb)",
+            anschaffungsdatum=date(2023, 1, 1),
+            stilllegungsdatum=gestern,
+            aktiv=True,
+        )
+        db.add(wp)
+        db.add(Strompreis(
+            anlage_id=anlage.id, verwendung="allgemein", gueltig_ab=date(2024, 1, 1),
+            netzbezug_arbeitspreis_cent_kwh=30.0, einspeiseverguetung_cent_kwh=8.0,
+        ))
+        await db.commit()
+
+        anlage = (await db.execute(
+            select(Anlage)
+            .options(selectinload(Anlage.investitionen), selectinload(Anlage.strompreise))
+            .where(Anlage.id == anlage.id)
+        )).scalar_one()
+
+        checker = DatenChecker(db)
+        ergebnisse = checker._check_strompreise(anlage)
+        wp_nag = [r for r in ergebnisse if "Wärmepumpe" in r.meldung or "wärmepumpe" in r.meldung.lower()]
+        assert wp_nag == [], (
+            f"Kein WP-Spezialtarif-Hinweis für stillgelegte WP erwartet, "
+            f"fand: {[r.meldung for r in wp_nag]}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_pv_erzeugung_map_filtert_post_stilllegung_imds():
+    """Historische IMDs vor Stilllegung zählen mit, post-Stilllegung-IMDs
+    werden ignoriert — sonst werden Werte des stillgelegten Moduls als
+    aktuelle PV-Erzeugung gezählt."""
+    from backend.services.daten_checker import DatenChecker
+    from backend.models import InvestitionMonatsdaten
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    async with _session_ctx() as db:
+        anlage = await _seed(db, total_kwp=10.0)
+        _add_module(db, anlage.id, "Süd", 10.0,
+                    anschaffungsdatum=date(2024, 1, 1),
+                    stilllegungsdatum=date(2024, 6, 30))
+        await db.flush()
+        sued_id = (await db.execute(select(Investition).where(Investition.anlage_id == anlage.id))).scalar_one().id
+        # Innerhalb Lebensspanne: zählt
+        db.add(InvestitionMonatsdaten(
+            investition_id=sued_id, jahr=2024, monat=5,
+            verbrauch_daten={"pv_erzeugung_kwh": 500.0},
+        ))
+        # Nach Stilllegung: zählt NICHT (Datenartefakt, manuell falsch erfasst)
+        db.add(InvestitionMonatsdaten(
+            investition_id=sued_id, jahr=2024, monat=8,
+            verbrauch_daten={"pv_erzeugung_kwh": 600.0},
+        ))
+        await db.commit()
+
+        anlage = (await db.execute(
+            select(Anlage)
+            .options(selectinload(Anlage.investitionen).selectinload(Investition.monatsdaten))
+            .where(Anlage.id == anlage.id)
+        )).scalar_one()
+
+        checker = DatenChecker(db)
+        pv_map = checker._get_pv_erzeugung_map(anlage)
+        assert pv_map.get((2024, 5)) == 500.0, f"Mai-IMD soll zählen, Karte: {pv_map}"
+        assert (2024, 8) not in pv_map, f"August-IMD nach Stilllegung darf nicht zählen, Karte: {pv_map}"
