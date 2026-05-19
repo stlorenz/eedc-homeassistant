@@ -248,9 +248,13 @@ class DatenChecker:
                 link="/einstellungen/anlage",
             ))
 
-        # PV-Module vorhanden
-        pv_module = [i for i in anlage.investitionen if i.typ == "pv-module" and i.aktiv]
-        hat_bkw = any(i.typ == "balkonkraftwerk" and i.aktiv for i in anlage.investitionen)
+        # PV-Module vorhanden. Filter respektiert Stilllegungsdatum (#608
+        # MartyBr): String-Verlegung zwischen Wechselrichtern wird über
+        # stilllegungsdatum-Setzen + neue Investition erfasst — der alte
+        # String soll dann nicht mehr zur Σ aktiver kWp beitragen.
+        heute = date.today()
+        pv_module = [i for i in anlage.investitionen if i.typ == "pv-module" and i.ist_aktiv_an(heute)]
+        hat_bkw = any(i.typ == "balkonkraftwerk" and i.ist_aktiv_an(heute) for i in anlage.investitionen)
         if not pv_module:
             if hat_bkw:
                 # BKW-only Setup: kein Fehler, nur Hinweis
@@ -269,7 +273,7 @@ class DatenChecker:
                 ))
         else:
             # kWp-Vergleich (PV-Module + BKW)
-            bkw_inv = [i for i in anlage.investitionen if i.typ == "balkonkraftwerk" and i.aktiv]
+            bkw_inv = [i for i in anlage.investitionen if i.typ == "balkonkraftwerk" and i.ist_aktiv_an(heute)]
             summe_kwp = sum((m.leistung_kwp or 0) for m in pv_module)
             summe_kwp += sum(
                 b.leistung_kwp or ((b.parameter or {}).get("leistung_wp", 0) * ((b.parameter or {}).get("anzahl", 1) or 1) / 1000)
@@ -997,8 +1001,11 @@ class DatenChecker:
         gemappt_count = 0
 
         # Reihenfolge nach Typ (#214 detLAN: WP vor Wallbox), nicht DB-ID
+        heute = date.today()
         for inv in sort_investitionen_nach_typ(anlage.investitionen):
-            if not inv.aktiv:
+            # Stilllegungsdatum respektieren (#608 MartyBr): stillgelegte
+            # Komponente braucht keine Sensor-Mapping-Pflege mehr.
+            if not inv.ist_aktiv_an(heute):
                 continue
             erwartet = erwartete_felder.get(inv.typ)
             if not erwartet:
