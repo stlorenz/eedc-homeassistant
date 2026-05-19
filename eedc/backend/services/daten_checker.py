@@ -1189,7 +1189,7 @@ class DatenChecker:
                     f"Behebung: 'Tag neu aggregieren' für genau diesen Tag (Reload-Symbol "
                     f"in der Tagesliste) — repariert SensorSnapshots + Aggregate in einem Schritt."
                 ),
-                link=f"/aussichten/energieprofil?datum={datum_spike.isoformat()}",
+                link=f"/einstellungen/energieprofil?datum={datum_spike.isoformat()}",
             ))
 
         return ergebnisse
@@ -1809,7 +1809,7 @@ class DatenChecker:
                 f"Werkbank kann sie aufdröseln."
             ),
             details=details,
-            link="/aussichten/energieprofil",
+            link="/einstellungen/energieprofil",
         )]
 
     async def _check_datenquelle_status(self, anlage: Anlage) -> list[CheckErgebnis]:
@@ -2013,7 +2013,7 @@ class DatenChecker:
                     f"(Δ {delta_signed:+.1f} kWh, {rel_signed:+.1f}%)"
                 ),
                 details=details,
-                link=f"/aussichten/energieprofil?datum={datum_.isoformat()}",
+                link=f"/einstellungen/energieprofil?datum={datum_.isoformat()}",
                 action_kind="reaggregate_day",
                 action_params={"anlage_id": anlage.id, "datum": datum_.isoformat()},
                 action_label="Tag reparieren",
