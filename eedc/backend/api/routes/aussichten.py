@@ -7,6 +7,7 @@ Prognosen und Vorhersagen für PV-Erträge:
 - Trend-Analyse: Historische Entwicklung
 """
 
+import logging
 from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -51,6 +52,8 @@ from backend.services.wetter.utils import wetter_symbol_aus_tag
 from backend.services.wetter.pvgis import get_pvgis_tmy_defaults
 from backend.services.wetter.models import WETTER_MODELLE
 from backend.services.prognose_service import berechne_pv_ertrag_tag
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -1501,10 +1504,13 @@ async def get_finanz_prognose(
                     and eff_ladepreis_c.quelle in ("dyn-tarif", "boersenpreis")
                 ):
                     speicher_lade_preis_cent = eff_ladepreis_c.effektiver_ladepreis_cent
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 # Helper darf Aussichten-Antwort nie killen — bei Fehler
                 # bleibt der Param-Mittelwert aus Etappe B.
-                pass
+                logger.warning(
+                    "aussichten: effektiver-Ladepreis-Lookup fehlgeschlagen "
+                    "(anlage=%s): %s", anlage_id, e,
+                )
     # Aus Entladung auf Ladung zurückrechnen (η-Verluste), daraus den
     # projizierten Netz-Anteil-kWh der Prognoseperiode bestimmen.
     speicher_wirkungsgrad_frac = max(0.5, speicher_wirkungsgrad_avg / 100)

@@ -1063,10 +1063,13 @@ async def get_aktueller_monat(
                         soc_start_prozent=soc_start,
                         soc_ende_prozent=soc_ende,
                     )
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 # SoC-Lookup darf den Endpoint nicht killen — bei Fehler
                 # bleibt das Drift-Flag False und der Monats-η wird angezeigt.
-                pass
+                logger.warning(
+                    "aktueller_monat: SoC-Drift-Lookup fehlgeschlagen "
+                    "(anlage=%s, %s/%s): %s", anlage_id, jahr, monat, e,
+                )
 
         # Monats-η nur ausweisen, wenn SoC-Drift nicht signifikant ist
         if sl > 0 and se > 0 and not speicher_soc_drift_flag:
@@ -1093,8 +1096,11 @@ async def get_aktueller_monat(
                 if eff.effektiver_ladepreis_cent is not None:
                     speicher_eff_ladepreis = round(eff.effektiver_ladepreis_cent, 2)
                 speicher_eff_ladepreis_quelle = eff.quelle
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "aktueller_monat: effektiver-Ladepreis-Lookup fehlgeschlagen "
+                    "(anlage=%s, %s/%s): %s", anlage_id, jahr, monat, e,
+                )
 
     # WP: Heizung/Warmwasser-Split (Wärme + bei getrennter Strommessung auch Strom, #191)
     wp_heizung = None

@@ -57,6 +57,15 @@ from backend.services.speicher_wirtschaftlichkeit import (
     berechne_v2h_ersparnis,
     ist_eta_degradation_alarm,
 )
+from backend.core.calculations import (
+    CO2_FAKTOR_BENZIN_KG_LITER,
+    CO2_FAKTOR_GAS_KG_KWH,
+    CO2_FAKTOR_STROM_KG_KWH,
+)
+from backend.core.field_definitions import (
+    get_eauto_ladung_kwh,
+    get_emob_pv_netz_kwh,
+)
 
 
 # ============================================================================
@@ -107,15 +116,6 @@ def _aufloesen_ladepreis(
             return param_lade_preis, eff_ladepreis.quelle
         return None, eff_ladepreis.quelle
     return eff_ladepreis.effektiver_ladepreis_cent, eff_ladepreis.quelle
-from backend.core.calculations import (
-    CO2_FAKTOR_BENZIN_KG_LITER,
-    CO2_FAKTOR_GAS_KG_KWH,
-    CO2_FAKTOR_STROM_KG_KWH,
-)
-from backend.core.field_definitions import (
-    get_eauto_ladung_kwh,
-    get_emob_pv_netz_kwh,
-)
 
 
 # =============================================================================
