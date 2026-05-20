@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel, Field
 from datetime import date
+import logging
 
 from backend.api.deps import get_db
 from backend.models.investition import Investition, InvestitionTyp, InvestitionMonatsdaten
@@ -72,6 +73,9 @@ from backend.core.field_definitions import (
 # ============================================================================
 # Etappe C (#264): Helper-Auflösung Param-Fallback ↔ IST-Werte
 # ============================================================================
+
+logger = logging.getLogger(__name__)
+
 
 def _aufloesen_wirkungsgrad(
     eta_ist: Optional[WirkungsgradErgebnis],
@@ -1930,6 +1934,30 @@ async def get_speicher_dashboard(
     for md in all_monatsdaten:
         md_by_inv.setdefault(md.investition_id, []).append(md)
 
+    # Etappe C (#264): TEP-basierter effektiver Ladepreis — anlageweit, einmal.
+    # Periode = älteste Speicher-Installation bis heute (oder neueste
+    # Stilllegung, wenn alle Speicher stillgelegt sind). Try/except-gekapselt:
+    # das Dashboard darf nie an einem Helper sterben (analog aussichten.py).
+    installs = [s.installationsdatum for s in speicher_list if s.installationsdatum]
+    stilllegungen = [s.stilllegungsdatum for s in speicher_list if s.stilllegungsdatum]
+    periode_von = min(installs) if installs else None
+    periode_bis = (
+        max(stilllegungen)
+        if stilllegungen and len(stilllegungen) == len(speicher_list)
+        else date.today()
+    )
+    eff_ladepreis = None
+    if periode_von is not None:
+        try:
+            eff_ladepreis = await berechne_effektiver_ladepreis(
+                db, anlage_id=anlage_id, von=periode_von, bis=periode_bis,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Speicher-Dashboard Anlage {anlage_id}: effektiver Ladepreis "
+                f"fehlgeschlagen: {type(e).__name__}: {e}"
+            )
+
     dashboards = []
     for speicher in speicher_list:
         # Issue #153 / #155 / #236: SoT-Filter inkl. stilllegungsdatum
@@ -1971,6 +1999,32 @@ async def get_speicher_dashboard(
         arbitrage_faehig = params.get(PARAM_SPEICHER["ARBITRAGE_FAEHIG"], PARAM_SPEICHER_DEFAULTS["arbitrage_faehig"])
         vollzyklen = gesamt_ladung / kapazitaet if kapazitaet > 0 else 0
 
+        # Etappe C (#264): SoC-korrigierter η-IST pro Speicher.
+        # aggregiere_speicher_ist als SoT-Helper statt Parallel-Summe.
+        eta_ist = None
+        if monatsdaten and periode_von is not None:
+            try:
+                ist_agg = aggregiere_speicher_ist(
+                    [md.verbrauch_daten or {} for md in monatsdaten]
+                )
+                if ist_agg.jahres_faktor > 0:
+                    nutzbar = params.get(
+                        PARAM_SPEICHER["NUTZBARE_KAPAZITAET_KWH"],
+                        params.get(PARAM_SPEICHER["KAPAZITAET_KWH"], 0),
+                    ) or 0
+                    eta_ist = await berechne_ist_wirkungsgrad(
+                        db, anlage_id=anlage_id, von=periode_von, bis=periode_bis,
+                        ladung_kwh=ist_agg.ladung_kwh_jahr / ist_agg.jahres_faktor,
+                        entladung_kwh=ist_agg.entladung_kwh_jahr / ist_agg.jahres_faktor,
+                        nutzbare_kapazitaet_kwh=float(nutzbar),
+                        fenster_monate=ist_agg.anzahl_monate,
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Speicher-Dashboard Anlage {anlage_id}, Speicher {speicher.id}: "
+                    f"η-IST fehlgeschlagen: {type(e).__name__}: {e}"
+                )
+
         # Ersparnis: Entladung ersetzt Netzbezug (Spread zwischen Netzbezug und Einspeisung)
         spread = eff_strompreis_cent - einspeiseverguetung_cent
         ersparnis = gesamt_entladung * spread / 100
@@ -1994,6 +2048,37 @@ async def get_speicher_dashboard(
             'arbitrage_avg_preis_cent': round(arbitrage_avg_preis, 1) if arbitrage_avg_preis > 0 else None,
             'arbitrage_gewinn_euro': round(arbitrage_gewinn, 2),
         }
+
+        # Etappe C (#264): TEP-basierte KPIs fürs UI — effektiver Ladepreis
+        # mit Quellen-Transparenz (C1/C4), SoC-korrigierter η-IST + Degradations-
+        # Alarm (C3). Felder sind optional; das Frontend fällt sonst auf die
+        # bestehenden Werte (arbitrage_avg_preis_cent, effizienz_prozent) zurück.
+        if eff_ladepreis is not None:
+            zusammenfassung['effektiver_ladepreis_cent'] = (
+                round(eff_ladepreis.effektiver_ladepreis_cent, 2)
+                if eff_ladepreis.effektiver_ladepreis_cent is not None else None
+            )
+            zusammenfassung['effektiver_ladepreis_quelle'] = eff_ladepreis.quelle
+            if eff_ladepreis.quelle == "datenbasis-zu-duenn":
+                zusammenfassung['ladepreis_abdeckung_prozent'] = round(
+                    eff_ladepreis.abdeckung_prozent, 0
+                )
+        if eta_ist is not None:
+            wirkungsgrad_param = params.get(
+                PARAM_SPEICHER["WIRKUNGSGRAD_PROZENT"],
+                PARAM_SPEICHER_DEFAULTS["wirkungsgrad_prozent"],
+            )
+            zusammenfassung['ist_wirkungsgrad_prozent'] = (
+                round(eta_ist.wirkungsgrad_prozent, 1)
+                if eta_ist.wirkungsgrad_prozent is not None else None
+            )
+            zusammenfassung['wirkungsgrad_quelle'] = eta_ist.quelle
+            zusammenfassung['param_wirkungsgrad_prozent'] = round(wirkungsgrad_param, 1)
+            if eta_ist.wirkungsgrad_prozent is not None:
+                zusammenfassung['eta_degradation_alarm'] = ist_eta_degradation_alarm(
+                    ist_wirkungsgrad_prozent=eta_ist.wirkungsgrad_prozent,
+                    param_wirkungsgrad_prozent=wirkungsgrad_param,
+                )
 
         dashboards.append(SpeicherDashboardResponse(
             investition=speicher,
