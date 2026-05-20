@@ -1004,8 +1004,8 @@ async def get_tagesprognose(
                 # liegen statt im parameter-JSON.
                 from backend.services.pv_orientation import (
                     get_pv_kwp, get_pv_neigung, get_pv_azimut,
+                    resolve_system_losses,
                 )
-                from backend.services.solar_forecast_service import DEFAULT_SYSTEM_LOSSES
                 from backend.models.pvgis_prognose import PVGISPrognose
                 total_kwp = sum(get_pv_kwp(inv) for inv in aktive_invs)
 
@@ -1021,10 +1021,7 @@ async def get_tagesprognose(
                     ).order_by(PVGISPrognose.abgerufen_am.desc()).limit(1)
                 )
                 pvgis = pvgis_result.scalar_one_or_none()
-                system_losses = (
-                    pvgis.system_losses / 100 if pvgis and pvgis.system_losses
-                    else DEFAULT_SYSTEM_LOSSES
-                )
+                system_losses = resolve_system_losses(pvgis)
 
                 # Tage bis zum Zieldatum berechnen
                 tage_bis_ziel = (datum - date.today()).days

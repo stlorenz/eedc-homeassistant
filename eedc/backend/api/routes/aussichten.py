@@ -52,6 +52,7 @@ from backend.services.wetter.utils import wetter_symbol_aus_tag
 from backend.services.wetter.pvgis import get_pvgis_tmy_defaults
 from backend.services.wetter.models import WETTER_MODELLE
 from backend.services.prognose_service import berechne_pv_ertrag_tag
+from backend.services.pv_orientation import resolve_system_losses
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,7 @@ class FinanzPrognoseResponse(BaseModel):
 # Konstanten
 # =============================================================================
 
-DEFAULT_SYSTEM_LOSSES = 0.14  # 14% Systemverluste
+# DEFAULT_SYSTEM_LOSSES: zentral in services/pv_orientation.py
 TEMP_COEFFICIENT = 0.004  # Leistungsabnahme pro °C über 25°C
 
 MONATSNAMEN = [
@@ -367,7 +368,7 @@ async def get_kurzfrist_prognose(
         ).order_by(PVGISPrognose.abgerufen_am.desc()).limit(1)
     )
     pvgis = result.scalar_one_or_none()
-    system_losses = pvgis.system_losses / 100 if pvgis and pvgis.system_losses else DEFAULT_SYSTEM_LOSSES
+    system_losses = resolve_system_losses(pvgis)
 
     # Wettervorhersage abrufen (Wettermodell der Anlage berücksichtigen)
     wetter_modell = anlage.wetter_modell or "auto"
