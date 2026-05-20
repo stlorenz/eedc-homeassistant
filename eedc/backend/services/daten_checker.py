@@ -1838,10 +1838,17 @@ class DatenChecker:
         ha_lts_verfuegbar = ha_svc.is_available
 
         # Letzte TagesZusammenfassung-Provenance prüfen (Hint, welcher Pfad
-        # tatsächlich beim letzten Aggregator-Lauf griff)
+        # tatsächlich beim letzten Aggregator-Lauf griff).
+        # stunden_verfuegbar > 0 schließt leere Stub-Rows aus: Ein Monats-
+        # abschluss für den laufenden Monat legt via backfill_range auch für
+        # noch nicht stattgefundene Tage TagesZusammenfassung-Rows an
+        # (stunden_verfuegbar=0, Source 'auto:monatsabschluss'). Ohne diesen
+        # Filter griffe datum.desc() so eine Zukunfts-Row und der Hint zeigte
+        # bis zum Verstreichen dieser Tage einen Fehlalarm.
         result = await self.db.execute(
             select(TagesZusammenfassung)
             .where(TagesZusammenfassung.anlage_id == anlage.id)
+            .where(TagesZusammenfassung.stunden_verfuegbar > 0)
             .order_by(TagesZusammenfassung.datum.desc())
             .limit(1)
         )
@@ -1882,10 +1889,11 @@ class DatenChecker:
                     "HA-Statistics ist verfügbar, die TagesZusammenfassung "
                     f"vom {tz.datum.isoformat() if tz else '?'} wurde aber noch "
                     f"aus '{letzte_source or 'unbekannt'}' geschrieben. "
-                    "Mit dem nächsten Monatsabschluss läuft Auto-Vollbackfill, "
-                    "danach gilt HA-LTS als Source-of-Truth."
+                    "Sobald diese Tage neu aus HA-Statistics aggregiert "
+                    "werden (nächster Monatsabschluss oder Tag-Reparatur), "
+                    "gilt HA-LTS als Source-of-Truth."
                 ),
-                link="/wartung/reparatur-werkbank",
+                link="/einstellungen/energieprofil",
             )]
         # HA-LTS nicht verfügbar → Standalone-Modus (Docker ohne HA-Verbindung
         # oder fehlende HA-Recorder-URL)
