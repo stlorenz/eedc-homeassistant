@@ -230,6 +230,19 @@ echo -e "${GREEN}  eedc-homeassistant v$VERSION gepusht.${NC}"
 echo ""
 echo -e "${CYAN}[5/6] Sync nach eedc-Standalone...${NC}"
 
+# eedc-Mirror VOR dem Sync auf origin-Stand bringen. Der Mirror ist ein
+# reiner Spiegel (nur release.sh schreibt). Ein lokal veralteter Stand
+# (Cross-Machine: ein Release vom anderen Rechner wurde hier nie gepullt)
+# oder ein durch einen früheren Fehl-Release divergierter Stand würde sonst
+# auf falscher Basis committen → Push scheitert non-fast-forward.
+echo "  eedc-Mirror mit origin abgleichen..."
+git -C "$EEDC_STANDALONE" fetch origin --quiet
+if [ "$(git -C "$EEDC_STANDALONE" rev-parse HEAD)" != "$(git -C "$EEDC_STANDALONE" rev-parse origin/main)" ]; then
+    echo -e "${YELLOW}  Mirror war nicht auf origin/main — reset --hard auf origin/main${NC}"
+    echo -e "${YELLOW}  (reiner Spiegel: kein lokaler Stand geht verloren).${NC}"
+    git -C "$EEDC_STANDALONE" reset --hard origin/main
+fi
+
 # backend/ und frontend/ komplett synchronisieren
 rsync -a --delete \
     --exclude='__pycache__' \
@@ -271,6 +284,10 @@ if git diff --cached --quiet; then
 else
     git commit -m "release: v$VERSION (sync from eedc-homeassistant)"
 fi
+# Lokalen Tag aus einem früheren Fehl-Release-Lauf tolerieren — sonst bricht
+# `git tag -a` mit "already exists" ab. Der Tag auf origin bleibt unberührt;
+# ist die Version dort bereits released, scheitert der Push unten laut.
+git tag -d "v$VERSION" 2>/dev/null || true
 git tag -a "v$VERSION" -m "Version $VERSION"
 git push && git push origin "v$VERSION"
 echo -e "${GREEN}  eedc v$VERSION gepusht.${NC}"
