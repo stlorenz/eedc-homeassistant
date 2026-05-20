@@ -64,3 +64,8 @@ htmlcov/
 # zusätzliche Backup-Targets oder Test-Snapshots automatisch mit greifen.
 eedc/data/*-wal
 eedc/data/*-shm
+# Backup-DBs (.bak) selbst. Nach dem History-Rewrite zur Entfernung der
+# historischen `eedc.db.bak` muss das Pattern verhindern, dass die Datei
+# bei einem späteren `git add .` wieder in den Index rutscht. Die .bak-
+# Endung greift NICHT durch das allgemeine `*.db`-Pattern oben.
+eedc/data/*.bak
