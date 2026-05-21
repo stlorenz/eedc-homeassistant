@@ -1,5 +1,7 @@
 # Konzept: Daten-Pipeline & Reparatur-Architektur (Etappe 3d)
 
+> **ARCHIVIERT (2026-05-21)** — Etappe 3d vollständig ausgeliefert in **v3.27.0** (Daten-Provenance, Konflikt-Resolver, Reparatur-Orchestrator, RepairWorkbench). Die Folge-Etappen sind ebenfalls erledigt: HA-LTS als Source-of-Truth (Etappe 4+5, v3.31.0), Per-Tag-Drift-Anzeige (Etappe 6, v3.31.1), Berechnungs-Layer (v3.31.5, siehe [`ADR-001-BERECHNUNGS-LAYER.md`](../ADR-001-BERECHNUNGS-LAYER.md)). Lebende Quellen: Roadmap-Issue [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) und die Auto-Memory `project_energieprofil_roadmap.md`.
+
 > **Status:** Päckchen 1 + 2 + 3 + 4 ausgeliefert 2026-05-09/10 (28 Commits seit v3.26.8, kein Release). 3d-Etappe komplett. Quellenwahl + Päckchen 5–7 als nächste Etappen positioniert. 27 SOURCE_LABELS, 6 Hierarchie-Stufen, 31 Tests grün (23 P1-P3 + 8 RepairOrchestrator).
 > **Voraussetzung Implementierung:** Etappe 3c abgeschlossen ✅ v3.26.8 (Detail-Konzept: [`KONZEPT-ENERGIEPROFIL-3C.md`](KONZEPT-ENERGIEPROFIL-3C.md) — Slot-Konvention an [#144](https://github.com/supernova1963/eedc-homeassistant/issues/144) angleichen + `quelle`-Marker auf `sensor_snapshots` als Schema-Vorlage).
 > **Ziel:** Provenance, Konflikt-Resolver, Reparatur-Orchestrator, Idempotenz und Aufräumen der Monster-Module der gesamten Aggregat-Daten-Schicht.
@@ -336,7 +338,7 @@ Erweiterung des Helper-Prinzips aus 3.4 für Aggregat-Berechnungen über die zen
 - Aggregator (`energie_profil/aggregator.py::aggregate_day`) ruft am Ende jedes Schreib-Laufs `pruefe_tep_tz_konsistenz` auf. Verletzung wird als Warning geloggt — Schreib-Drift ist sofort sichtbar, kein Tag wird zurückgehalten.
 - Bestehende Konsumenten werden step-by-step beim nächsten Touch migriert. Liste offener Stellen: Memory `project_berechnungs_layer_offen`.
 
-Detail-Architektur: [`KONZEPT-BERECHNUNGS-LAYER.md`](KONZEPT-BERECHNUNGS-LAYER.md). Regel-Notation: [`ADR-001-BERECHNUNGS-LAYER.md`](ADR-001-BERECHNUNGS-LAYER.md).
+Detail-Architektur: [`KONZEPT-BERECHNUNGS-LAYER.md`](../KONZEPT-BERECHNUNGS-LAYER.md). Regel-Notation: [`ADR-001-BERECHNUNGS-LAYER.md`](../ADR-001-BERECHNUNGS-LAYER.md).
 
 ## 4. Konflikt-Resolver-Architektur
 
@@ -640,4 +642,4 @@ Reihenfolge: Etappe 3c zuerst abschließen, dann Etappe 3d in nummerierten Päck
 
 ## 9. Verhältnis zu anderen Konzepten
 
-[`KONZEPT-ENERGIEPROFIL.md`](KONZEPT-ENERGIEPROFIL.md) Etappe 3c liefert Slot-Konvention + Source-Tracking auf `sensor_snapshots` als Schema-Vorlage; 3d generalisiert auf alle Aggregat-Tabellen. [`KONZEPT-PROGNOSEQUELLEN-WAHL.md`](KONZEPT-PROGNOSEQUELLEN-WAHL.md) ist Lese-Resolver pro Anlage über drei alternative Prognose-Quellen — disjunkt zum Schreib-Resolver hier, Berührungspunkt nur in Päckchen 6 (Solcast-Cleanup). [`KONZEPT-KORREKTURPROFIL.md`](KONZEPT-KORREKTURPROFIL.md), [`KONZEPT-LIVE-SNAPSHOT-5MIN.md`](KONZEPT-LIVE-SNAPSHOT-5MIN.md) und [`KONZEPT-MQTT-GATEWAY.md`](KONZEPT-MQTT-GATEWAY.md) sind unabhängig; MQTT-Gateway wird in Päckchen 5 lose berührt (Source-Marker `mqtt_fallback`).
+[`KONZEPT-ENERGIEPROFIL.md`](KONZEPT-ENERGIEPROFIL.md) Etappe 3c liefert Slot-Konvention + Source-Tracking auf `sensor_snapshots` als Schema-Vorlage; 3d generalisiert auf alle Aggregat-Tabellen. [`KONZEPT-PROGNOSEQUELLEN-WAHL.md`](KONZEPT-PROGNOSEQUELLEN-WAHL.md) ist Lese-Resolver pro Anlage über drei alternative Prognose-Quellen — disjunkt zum Schreib-Resolver hier, Berührungspunkt nur in Päckchen 6 (Solcast-Cleanup). [`KONZEPT-KORREKTURPROFIL.md`](KONZEPT-KORREKTURPROFIL.md), [`KONZEPT-LIVE-SNAPSHOT-5MIN.md`](../KONZEPT-LIVE-SNAPSHOT-5MIN.md) und [`KONZEPT-MQTT-GATEWAY.md`](KONZEPT-MQTT-GATEWAY.md) sind unabhängig; MQTT-Gateway wird in Päckchen 5 lose berührt (Source-Marker `mqtt_fallback`).

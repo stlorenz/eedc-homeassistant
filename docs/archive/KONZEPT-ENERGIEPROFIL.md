@@ -1,5 +1,7 @@
 # Konzept: Energieprofil-Datenbestand (Etappe 1 Revision)
 
+> **ARCHIVIERT (2026-05-21)** — Vollständig abgearbeitet. Dieses Dokument war das Etappe-1-Revisions-Konzept des Energieprofils; alle hier beschriebenen Etappen (1, 2, 3, 3b samt Mängel-Behebung) sind ausgeliefert. Das Daten-Fundament wurde danach durch Etappe 3c (v3.26.8), 3d (v3.27.0) sowie HA-LTS-SoT — Etappe 4+5 (v3.31.0) und Etappe 6 (v3.31.1) — abgeschlossen. Lebende Quellen für den aktuellen Stand: Roadmap-Issue [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) und die Auto-Memory `project_energieprofil_roadmap.md`. Offene Folge-Features (Saisonale Muster, Speicher-Simulation) sind dort gelistet — reine Analyse-Features, datengebunden, Trigger frühestens Herbst 2026. Die Statustabelle unten ist der Stand vom 2026-05-09 (3c/3d damals noch ⏳).
+
 > **Dokument-Stand 2026-05-09 (v3.26.7):** Header und Implementierungsstand wurden im Aufräum-Sprint nachgezogen. Die ursprüngliche Konzept-Doku von 2026-03 ist größtenteils umgesetzt — die unteren Sektionen (Implementierungsschritte Phase A, Schritt 1–8) sind **historisch**. Aktueller Stufenplan und laufende Etappen werden in der Auto-Memory unter `project_energieprofil_roadmap.md` und in Roadmap-Issue [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) gepflegt.
 
 ## Ausgangslage und Motivation

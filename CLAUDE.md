@@ -190,7 +190,7 @@ EEDC Add-on                              Community Server
 
 - **EEDC-Korrekturprofil O1+O2 (v3.26.0–v3.26.2):** Päckchen 1 (Recency) + Päckchen 2 (Sonnenstand × Wetter live) parallel zum Legacy-Skalar als Diagnose. Live-Pfad-Switch wird in Prognosequellen-Wahl Schritt 2 mitgemacht.
 - **HA-Energiekonfiguration importieren (v3.26.5, #197):** Setup-Vereinfachung Olli0103 — Energy-Dashboard-Konfig aus HA wird im Setup-Wizard übernommen.
-- **Etappe 3c Energieprofil Read-/Write-Architektur konsolidiert (v3.26.8):** zentraler SoT-Helper statt Drift-Patches; siehe `docs/KONZEPT-DATENPIPELINE.md`.
+- **Etappe 3c Energieprofil Read-/Write-Architektur konsolidiert (v3.26.8):** zentraler SoT-Helper statt Drift-Patches; siehe `docs/archive/KONZEPT-DATENPIPELINE.md`.
 - **Reload-Vorschau Counter-Boundary + „Nur neu rechnen" (v3.26.6):** Vorschau heilt sich selbst.
 
 **v3.25.x** (2026-04-29/05-05) — Live-Snapshot 5-Min + Investitions-Parameter-SoT:
