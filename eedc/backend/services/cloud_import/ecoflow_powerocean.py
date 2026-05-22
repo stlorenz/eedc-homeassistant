@@ -98,25 +98,33 @@ def _build_sign_headers(
 ) -> dict:
     """HTTP-Header mit HMAC-SHA256 Signatur erzeugen.
 
-    EcoFlow signiert ALLE Parameter gemeinsam: die Request-Parameter UND
-    accessKey/nonce/timestamp werden zusammen alphabetisch nach ASCII
-    sortiert — nicht „Request-Parameter sortiert, Auth-Triple angehängt".
-    Beispiel mit sn-Query-Parameter: `accessKey=…&nonce=…&sn=…&timestamp=…`.
+    EcoFlow signiert die Request-Parameter alphabetisch sortiert und hängt
+    `accessKey/nonce/timestamp` an: `sn=…&accessKey=…&nonce=…&timestamp=…`.
+    Ein parameterloser Aufruf (device/list) ergibt `accessKey=…&nonce=…&
+    timestamp=…`. Per Live-Konto bestätigt (Dirk-PN 2026-05-21,
+    device/quota/all → code=0).
 
-    Ein parameterloser Aufruf (z. B. device/list) ergibt in beiden
-    Konventionen denselben String und maskierte den Reihenfolge-Bug bis
-    zur Dirk-PN-Diagnose 2026-05-21 (device/quota/all mit sn → code 8521).
+    KEIN `Content-Type`-Header: Auf dem GET `device/quota/all` lehnt die
+    EcoFlow-API die Signatur mit `code 8521 signature is wrong` ab, sobald
+    `Content-Type: application/json` gesetzt ist. Für POST `device/quota/data`
+    setzt httpx den Header über `json=` selbst korrekt — hier darf er nicht
+    fest gesetzt werden.
+
+    HISTORIE: Fix 2da913ce sortierte irrtümlich ALLE Parameter gemeinsam
+    (`accessKey=…&nonce=…&sn=…&timestamp=…`); Dirks Live-Test ergab 8521 —
+    die Theorie war falsch, die echte Ursache war der Content-Type-Header.
     """
     nonce = str(random.randint(100000, 999999))
     timestamp = str(int(time.time() * 1000))
 
-    # Request-Parameter + Auth-Triple gemeinsam alphabetisch sortieren.
-    sign_params: dict = _flatten_dict(params) if params else {}
-    sign_params["accessKey"] = access_key
-    sign_params["nonce"] = nonce
-    sign_params["timestamp"] = timestamp
-    sorted_parts = sorted(sign_params.items(), key=lambda x: x[0])
-    sign_str = "&".join(f"{k}={v}" for k, v in sorted_parts)
+    # Request-Parameter sortiert als Query-String, dann Auth-Triple anhängen.
+    if params:
+        flat = _flatten_dict(params)
+        sorted_parts = sorted(flat.items(), key=lambda x: x[0])
+        param_str = "&".join(f"{k}={v}" for k, v in sorted_parts)
+        sign_str = f"{param_str}&accessKey={access_key}&nonce={nonce}&timestamp={timestamp}"
+    else:
+        sign_str = f"accessKey={access_key}&nonce={nonce}&timestamp={timestamp}"
 
     sign = _hmac_sha256(sign_str, secret_key)
 
@@ -125,7 +133,6 @@ def _build_sign_headers(
         "nonce": nonce,
         "timestamp": timestamp,
         "sign": sign,
-        "Content-Type": "application/json;charset=UTF-8",
     }
 
 
