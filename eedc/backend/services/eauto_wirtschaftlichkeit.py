@@ -69,6 +69,65 @@ def _benzinpreis_default(eauto_parameter: Optional[dict]) -> float:
     ) or BENZIN_PREIS_DEFAULT_EURO_L
 
 
+@dataclass
+class BenzinpreisAufloesung:
+    """Aufgelöster Benzinpreis für eine Berechnung + Quelle für Diagnostik."""
+    preis_euro: float
+    quelle: str  # "slider" | "parameter" | "monatsdaten" | "default"
+
+
+def resolve_eauto_benzinpreis(
+    *,
+    query_override: Optional[float],
+    eauto_parameter: Optional[dict],
+    letzter_monats_benzinpreis: Optional[float],
+) -> BenzinpreisAufloesung:
+    """Auflösungs-Kette für annuelle E-Auto-ROI-Berechnung (`get_roi_dashboard`).
+
+    Anders als die periodische Ersparnis (`berechne_eauto_ersparnis_periode`)
+    rechnet ROI mit Jahresfahrleistung × einmaligem Preis. Reihenfolge:
+
+    1. **Query-Override** (ROI-Slider): bewusste User-Eingabe, gilt für alle E-Autos.
+    2. **`inv.parameter['benzinpreis_euro']`**: per-Investition gepflegter Wert.
+    3. **Letzter `Monatsdaten.kraftstoffpreis_euro`** (EU Weekly Oil Bulletin):
+       aktueller Marktpreis aus der Realität.
+    4. `PARAM_E_AUTO_DEFAULTS['benzinpreis_euro']` (1,65 €) als letzter Fallback.
+
+    Vorher las `get_roi_dashboard` nur den Query-Param (Default 1,85 €) und
+    ignorierte die per-Investition gespeicherten Werte — gleiche Bug-Klasse
+    wie der v3.25.0-Fix für `jahresfahrleistung_km` etc., aber für
+    `benzinpreis_euro` damals vergessen.
+    """
+    if query_override is not None:
+        return BenzinpreisAufloesung(float(query_override), "slider")
+    if eauto_parameter is not None:
+        param_preis = eauto_parameter.get(PARAM_E_AUTO["BENZINPREIS_EURO"])
+        if param_preis is not None:
+            return BenzinpreisAufloesung(float(param_preis), "parameter")
+    if letzter_monats_benzinpreis is not None:
+        return BenzinpreisAufloesung(float(letzter_monats_benzinpreis), "monatsdaten")
+    return BenzinpreisAufloesung(
+        float(PARAM_E_AUTO_DEFAULTS["benzinpreis_euro"]), "default",
+    )
+
+
+def letzter_kraftstoffpreis_aus_lookup(
+    lookup: dict[tuple[int, int], Optional[float]],
+) -> Optional[float]:
+    """Letzter nicht-leerer `kraftstoffpreis_euro` aus dem Monatsdaten-Lookup.
+
+    Iteriert in absteigender Reihenfolge (jüngster Monat zuerst) und liefert
+    den ersten nicht-None Preis. Wird als Hinweis-Wert (Slider-Placeholder)
+    und als Stufe 3 der `resolve_eauto_benzinpreis`-Kette genutzt.
+    """
+    if not lookup:
+        return None
+    for (_, _), preis in sorted(lookup.items(), reverse=True):
+        if preis is not None:
+            return float(preis)
+    return None
+
+
 def berechne_eauto_ersparnis(
     *,
     km_gefahren: float,
