@@ -220,16 +220,25 @@ export default function MonatsabschlussWizard() {
     }
 
     for (const typ of Object.keys(typGroups)) {
+      // Bei genau einer 'sonstiges'-Investition die Bezeichnung als Stepper-Titel
+      // zeigen — sonst kollidiert das generische 'Sonstiges' optisch mit dem
+      // Stepper-Titel des typ-übergreifenden 'Allgemein'-Steps weiter hinten.
+      const invs = typGroups[typ]
+      const title =
+        typ === 'sonstiges' && invs.length === 1 && invs[0].bezeichnung
+          ? invs[0].bezeichnung
+          : getTypLabel(typ)
       s.push({
         id: typ,
-        title: getTypLabel(typ),
+        title,
         icon: TYP_ICONS[typ] || <Zap className="w-4 h-4" />,
       })
     }
 
-    // Optionale Felder Step (Sonderkosten, Notizen)
+    // Typ-übergreifende Felder (Sonderkosten, Notizen) — eigener Step,
+    // damit er nicht mit dem 'sonstiges'-Investitionstyp kollidiert.
     if (data.optionale_felder && data.optionale_felder.length > 0) {
-      s.push({ id: 'optionale', title: 'Sonstiges', icon: <FileText className="w-4 h-4" /> })
+      s.push({ id: 'optionale', title: 'Allgemein', icon: <FileText className="w-4 h-4" /> })
     }
 
     s.push({ id: 'summary', title: 'Zusammenfassung', icon: <CheckCircle className="w-4 h-4" /> })
