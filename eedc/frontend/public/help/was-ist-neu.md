@@ -1,11 +1,17 @@
 # Was ist neu
 
-> **Stand:** Mai 2026 (v3.32.2)
+> **Stand:** Mai 2026 (v3.32.3)
 > **Diese Seite** zeigt pro Version, was sich für dich als Anwender geändert hat — kürzer als der technische [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md), ausführlicher als die Schnellübersicht-Tabelle in der [Übersicht](BENUTZERHANDBUCH.md#was-ist-neu-seit-v316).
 >
 > **Kein Banner, kein Pop-up:** eedc zeigt diese Liste nicht ungefragt an. HA-App-Nutzer sehen den Changelog ohnehin schon im Add-on-Store, GitHub-Releases haben einen eigenen. Wer wissen will, was neu ist, schaut hier rein — Pull statt Push.
 >
 > **Lesehinweis:** Die jüngsten Versionen stehen oben. Jeder Punkt verlinkt entweder auf die zuständige Hilfe-Sektion oder direkt auf die App-Funktion (sofern erreichbar). Anker-URLs (`?doc=was-ist-neu`) sind teilbar.
+
+---
+
+## v3.32.3 — Doku-Nachreichung zu v3.32.2 (Mai 2026)
+
+Bei v3.32.2 wurde diese Seite versehentlich noch mit dem v3.32.1-Stand ausgeliefert — die Inhalte zu Sungrow, EcoFlow, Victron, WP-Betriebsstunden und IA-Konzept (siehe nächster Block unten) sind jetzt auch in der In-App-Hilfe sichtbar. Keine funktionalen Änderungen.
 
 ---
 
