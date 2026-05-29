@@ -7,6 +7,25 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [3.34.6] - 2026-05-29 — Fronius-Connector: PV-Erzeugung auf Gen24/neuer Firmware (E_Total-Fallback) (#300)
+
+> 🐛 **Connector-Fix (Root-Cause upstream im Adapter).** Der Fronius-Solar-API-Connector las die PV-Gesamterzeugung nur aus `GetPowerFlowRealtimeData → Site.E_Total`. Auf Gen24 / neuerer Firmware ist dieses Feld deprecatet und liefert `null` — Folge: Netzbezug/Einspeisung (Smart Meter) kamen rein, die **PV-Erzeugung fehlte komplett** (Safi105, Monatsbericht ohne PV-Ertrag). Der vorgesehene Fallback `GetInverterRealtimeData → TOTAL_ENERGY` war im Code angelegt (`INVERTER_DATA_URL`), aber nicht verdrahtet. Connector-/Cloud-Import-Pfad, **kein Aggregator-Schreibpfad**.
+
+### Fixed
+
+- **PV-Gesamterzeugung-Fallback verdrahtet:** ist `Site.E_Total` leer, holt der Connector die PV-Summe jetzt aus `GetInverterRealtimeData` (Scope=System, Summe `TOTAL_ENERGY` über alle Wechselrichter) — sowohl beim Lesen der Zählerstände (`_read_snapshot`) als auch in der Sensor-Liste des Verbindungstests. Bleiben beide Quellen leer, ist PV weiterhin `None` (kein 0-Artefakt).
+- Wirkt **vorwärts** (neue Snapshots/Aggregationen) — bereits ohne PV geschriebene Monate füllen sich erst bei erneuter Erfassung.
+
+### Test
+
+- Neue Datei `test_fronius_connector_gen24_pv_fallback_300.py` (5 Tests): Fallback greift bei `E_Total=null`, E_Total hat Vorrang wenn vorhanden, PV bleibt `None` wenn beide Quellen leer, Helper summiert / ignoriert `None`+unparsebar. Suite **577 grün** (572 + 5).
+
+### Notes
+
+- Per Fronius-Solar-API-V1-Doku umgesetzt, aber **noch nicht an einem echten Gen24 verifiziert** (kein Testgerät beim Maintainer) — Gegencheck durch Tester (Safi105) offen, ob `TOTAL_ENERGY` die erwarteten kWh liefert.
+
+---
+
 ## [3.34.5] - 2026-05-29 — Multi-String/BKW-Tagesprognose: Kollaps bei OpenMeteo-Aussetzern verhindert (#306)
 
 > 🐛 **Robustheits-Fix im Forecast-Pfad.** Bei Anlagen mit mehreren Ausrichtungen (Multi-String, häufig + separates BKW) fragt eedc OpenMeteo **pro Orientierungsgruppe mit einem eigenen parallelen Call** ab. Schlug einer dieser Calls transient fehl, wurde die Gruppe **still übersprungen, ohne ihr kWp-Gewicht umzuverteilen** — die Tagesprognose kollabierte auf die Solo-Produktion der überlebenden Gruppe(n) (z. B. nur das BKW → 4.6 statt 64.7 kWh). Der Prefetch-Job fror diesen Wert als Tagesprognose ein und verzerrte Genauigkeits-Tracking + Lernfaktor. Gemeldet von Rainer (rapahl), zweites Vorkommen → systematisch, kein Einzelfall. Solcast (eigener, unabhängiger Call) blieb korrekt. Forecast-Pfad, **kein Aggregator-Schreibpfad**.

@@ -1,11 +1,28 @@
 # Was ist neu
 
-> **Stand:** Mai 2026 (v3.34.5)
+> **Stand:** Mai 2026 (v3.34.6)
 > **Diese Seite** zeigt pro Version, was sich für dich als Anwender geändert hat — kürzer als der technische [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md), ausführlicher als die Schnellübersicht-Tabelle in der [Übersicht](BENUTZERHANDBUCH.md#was-ist-neu-seit-v316).
 >
 > **Kein Banner, kein Pop-up:** eedc zeigt diese Liste nicht ungefragt an. HA-App-Nutzer sehen den Changelog ohnehin schon im Add-on-Store, GitHub-Releases haben einen eigenen. Wer wissen will, was neu ist, schaut hier rein — Pull statt Push.
 >
 > **Lesehinweis:** Die jüngsten Versionen stehen oben. Jeder Punkt verlinkt entweder auf die zuständige Hilfe-Sektion oder direkt auf die App-Funktion (sofern erreichbar). Anker-URLs (`?doc=was-ist-neu`) sind teilbar.
+
+---
+
+## v3.34.6 — Fronius Gen24: PV-Erzeugung wird wieder gelesen (Mai 2026)
+
+### Was sich für dich ändert
+
+- **Fronius-Solar-API-Connector an Gen24-Wechselrichtern (und neuerer Firmware):** Bisher konnte es passieren, dass nach dem Verbinden des Connectors zwar Netzbezug und Einspeisung ankamen, die **PV-Erzeugung aber fehlte** (Monatsbericht ohne PV-Ertrag). Ursache: Fronius hat das bisher genutzte Gesamtzähler-Feld auf neueren Geräten abgeschaltet. eedc liest die PV-Erzeugung jetzt zusätzlich direkt von den Wechselrichtern aus, wenn das alte Feld leer ist.
+- Die Korrektur wirkt **ab jetzt** — bereits ohne PV gespeicherte Monate füllen sich erst, wenn du sie neu erfasst/aggregierst.
+
+### Gut zu wissen
+
+- Auf einem echten Gen24 ist dieser Weg noch nicht final gegengeprüft. Wenn du ein Gen24 hast: ein kurzer Blick, ob die PV-kWh jetzt plausibel ankommen, hilft.
+
+### Mit Dank an
+
+- Safi105 für den Bug-Report mit Screenshots.
 
 ---
 
