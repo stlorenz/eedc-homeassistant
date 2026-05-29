@@ -1,11 +1,23 @@
 # Was ist neu
 
-> **Stand:** Mai 2026 (v3.34.8)
+> **Stand:** Mai 2026 (v3.34.9)
 > **Diese Seite** zeigt pro Version, was sich für dich als Anwender geändert hat — kürzer als der technische [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md), ausführlicher als die Schnellübersicht-Tabelle in der [Übersicht](BENUTZERHANDBUCH.md#was-ist-neu-seit-v316).
 >
 > **Kein Banner, kein Pop-up:** eedc zeigt diese Liste nicht ungefragt an. HA-App-Nutzer sehen den Changelog ohnehin schon im Add-on-Store, GitHub-Releases haben einen eigenen. Wer wissen will, was neu ist, schaut hier rein — Pull statt Push.
 >
 > **Lesehinweis:** Die jüngsten Versionen stehen oben. Jeder Punkt verlinkt entweder auf die zuständige Hilfe-Sektion oder direkt auf die App-Funktion (sofern erreichbar). Anker-URLs (`?doc=was-ist-neu`) sind teilbar.
+
+---
+
+## v3.34.9 — Wärmepumpen-Kacheln: Starts & Betriebsstunden „seit Anschaffung" (Mai 2026)
+
+### Was sich für dich ändert
+
+- **Die WP-Kacheln „Kompressor-Starts" und „Betriebsstunden" zeigen jetzt den von eedc seit Anschaffung erfassten Wert** — nicht mehr den vollen Lebensdauer-Zählerstand des Hersteller-Sensors (der auch die Zeit vor der Erfassung in eedc enthielt und dadurch irreführend groß wirkte). Der vollständige Zählerstand bleibt im **Tooltip** der Kachel sichtbar. Auch „Ø Laufzeit pro Start" und „Starts pro Betriebsstunde" beziehen sich jetzt auf denselben Zeitraum.
+
+### Mit Dank an
+
+- detLAN für die Diskussion und den gemeinsamen Kompromiss.
 
 ---
 

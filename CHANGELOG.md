@@ -7,6 +7,22 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [3.34.9] - 2026-05-29 — WP-Dashboard: Counter-Kacheln „seit Anschaffung", Lebensdauer-Zählerstand im Tooltip (#238/#290)
+
+> 🎨 **UX-Kompromiss mit detLAN** (#238/#290). Die WP-Counter-Kacheln (Kompressor-Starts, Betriebsstunden + die abgeleiteten Ø Laufzeit/Start, Starts/Betriebsstunde) zeigten als Hauptwert den rohen **Lebensdauer-Zählerstand** des Hersteller-Sensors — inkl. Betrieb vor Anschaffung, was den Monatsbezug verfälschte. Jetzt limitiert die Anzeige konsequent auf das **ab Anschaffungsdatum von eedc Erfasste**; der Lebensdauer-Zählerstand bleibt der Vollständigkeit halber im Tooltip. Reiner Read-/Display-Pfad (`dashboards.py`), **kein Aggregator-Schreibpfad**.
+
+### Changed
+
+- **WP-Dashboard-Counter-Kacheln:** Hauptwert = Σ der von eedc erfassten Tagesinkremente **seit Anschaffung** statt Lebensdauer-Counter. Der rohe Zählerstand (Lebensdauer) steht jetzt im Kachel-Tooltip („Zählerstand (Lebensdauer): …"). Titel „(Lebensdauer)" → „(seit Anschaffung)".
+- **Abgeleitete KPIs** „Ø Laufzeit pro Start" + „Starts pro Betriebsstunde" rechnen mit den seit-Anschaffung erfassten Summen (gleicher Zeitraum für beide Counter), nicht mehr mit den zwei — ggf. unterschiedlich alten — Lebensdauer-Ständen.
+- Backend liefert dazu `kompressor_starts_summe_erfasst` + `betriebsstunden_summe_erfasst`; `*_gesamt` (Lebensdauer) bleibt für den Tooltip erhalten.
+
+### Test
+
+- `test_wp_dashboard_betriebsstunden.py` auf die neue Semantik angepasst (Hauptwert = Σ Tagesinkremente, Lebensdauer separat, Ratios aus den erfassten Summen). Suite **584 grün**, `tsc` grün.
+
+---
+
 ## [3.34.8] - 2026-05-29 — Cockpit-Übersicht: E-Auto-Ersparnis mit Monats-Benzinpreis (#260)
 
 > 🐛 **Letzter Drift-Fix zu #260 (NongJoWo).** Die Benzin-Ersparnis in der Cockpit-Übersicht (E-Mobilität- + E-Auto-Sektion) wurde mit dem **statischen Investitions-Parameter-Benzinpreis** (1,80 €-Default) gerechnet, während Monatsberichte und E-Auto-Dashboard den **pro Monat** aus dem EU Weekly Oil Bulletin gepflegten Preis (`Monatsdaten.kraftstoffpreis_euro`, seit v3.17.0) nutzen → zwei Sichten, zwei Zahlen. Read-Site-Drift, **kein Aggregator-Schreibpfad**.
