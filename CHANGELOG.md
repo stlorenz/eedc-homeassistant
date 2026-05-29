@@ -7,6 +7,28 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [3.34.7] - 2026-05-29 — HA-Export: Eigenverbrauchsquote bei IMD-Setups korrekt (#304, Teil 1)
+
+> 🐛 **Fix des gemeldeten HA-Export-Symptoms** (Teil 1 von #304). Der HA-Export-Sensor `eigenverbrauch_quote_prozent` zeigte **2,2 % statt ~40 %** (und `eigenverbrauch_gesamt_kwh` 830 statt ~15.000). Ursache: HA-Export sourcte die PV-Erzeugung korrekt aus `InvestitionMonatsdaten`, las aber Eigen-/Direkt-/Gesamtverbrauch aus den **berechneten Legacy-Feldern** in `Monatsdaten` — die bei modernen IMD-basierten Setups leer bleiben (nur CSV/JSON-Import füllt sie). Reiner Read-/Berechnungs-Fix, **kein Aggregator-Schreibpfad**.
+
+### Added
+
+- **`core/berechnungen/verbrauch.py` → `berechne_verbrauchs_kennzahlen`** als Single Source of Truth für die Eigenverbrauchs-/Autarkie-Formel (`direktverbrauch = max(0, PV − Einspeisung − Speicher-Ladung)`, `eigenverbrauch = + Speicher-Entladung`, `gesamtverbrauch = + Netzbezug`), deckungsgleich mit cockpit/uebersicht.py + daten_checker.py (ADR-001-Berechnungs-Layer).
+
+### Fixed
+
+- **HA-Export** rechnet Eigen-/Direkt-/Gesamtverbrauch + Quoten jetzt über den SoT-Helper aus PV(IMD) + Speicher(IMD) + Zählerwerten (Einspeisung/Netzbezug aus `Monatsdaten`) statt aus leeren Legacy-Feldern. Betrifft die Sensoren `eigenverbrauch_quote_prozent`, `eigenverbrauch_gesamt_kwh`, `direktverbrauch_gesamt_kwh`, `gesamtverbrauch_kwh`, `autarkie_prozent` + die davon abhängige `eigenverbrauch_ersparnis_euro`.
+
+### Test
+
+- Neue Datei `test_ha_export_eigenverbrauch_imd_304.py` (5 Tests): Helper-Formel (mit/ohne Speicher, PV=0, 100 %-Deckel) + Integration (IMD-PV, Legacy-Felder leer → EV-Quote 40 % statt kollabiert). Suite **582 grün** (577 + 5).
+
+### Notes
+
+- **#304 bleibt offen.** Dieselbe Legacy-Read-Klasse betrifft auch **Aussichten** (EV-Quoten-Historie + Finanz-Ersparnis, pro Monat) und den **PDF-Bericht** (Monatsbericht nutzt zudem eine Formel **ohne** Batterie-Terme). Deren Umstellung auf den Helper ändert Geld-/KPI-Zahlen und ist als **eigene Etappe nach v3.34** vorgesehen (eigener Verifikations-/Tester-Zyklus, parallelisierbar mit #303). cockpit/daten_checker sind bereits korrekt (Referenz-Pattern).
+
+---
+
 ## [3.34.6] - 2026-05-29 — Fronius-Connector: PV-Erzeugung auf Gen24/neuer Firmware (E_Total-Fallback) (#300)
 
 > 🐛 **Connector-Fix (Root-Cause upstream im Adapter).** Der Fronius-Solar-API-Connector las die PV-Gesamterzeugung nur aus `GetPowerFlowRealtimeData → Site.E_Total`. Auf Gen24 / neuerer Firmware ist dieses Feld deprecatet und liefert `null` — Folge: Netzbezug/Einspeisung (Smart Meter) kamen rein, die **PV-Erzeugung fehlte komplett** (Safi105, Monatsbericht ohne PV-Ertrag). Der vorgesehene Fallback `GetInverterRealtimeData → TOTAL_ENERGY` war im Code angelegt (`INVERTER_DATA_URL`), aber nicht verdrahtet. Connector-/Cloud-Import-Pfad, **kein Aggregator-Schreibpfad**.

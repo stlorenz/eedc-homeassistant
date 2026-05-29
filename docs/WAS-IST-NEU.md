@@ -1,11 +1,23 @@
 # Was ist neu
 
-> **Stand:** Mai 2026 (v3.34.6)
+> **Stand:** Mai 2026 (v3.34.7)
 > **Diese Seite** zeigt pro Version, was sich für dich als Anwender geändert hat — kürzer als der technische [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md), ausführlicher als die Schnellübersicht-Tabelle in der [Übersicht](BENUTZERHANDBUCH.md#was-ist-neu-seit-v316).
 >
 > **Kein Banner, kein Pop-up:** eedc zeigt diese Liste nicht ungefragt an. HA-App-Nutzer sehen den Changelog ohnehin schon im Add-on-Store, GitHub-Releases haben einen eigenen. Wer wissen will, was neu ist, schaut hier rein — Pull statt Push.
 >
 > **Lesehinweis:** Die jüngsten Versionen stehen oben. Jeder Punkt verlinkt entweder auf die zuständige Hilfe-Sektion oder direkt auf die App-Funktion (sofern erreichbar). Anker-URLs (`?doc=was-ist-neu`) sind teilbar.
+
+---
+
+## v3.34.7 — HA-Export: Eigenverbrauchsquote wieder korrekt (Mai 2026)
+
+### Was sich für dich ändert
+
+- **Wenn du die eedc-Kennzahlen als Home-Assistant-Sensoren exportierst:** Die Eigenverbrauchsquote (`eigenverbrauch_quote_prozent`) und der Gesamt-Eigenverbrauch zeigten bei Setups, deren PV-Daten aus den Investitions-Monatsdaten stammen (HA-Statistik / Connector / Aggregator), viel zu niedrige Werte (z. B. 2 % statt ~40 %). Ursache war ein veraltetes Datenfeld. Die Sensoren rechnen jetzt aus den korrekten Quellen — Quote, Eigenverbrauch, Autarkie und die daraus abgeleitete Ersparnis stimmen wieder.
+
+### Gut zu wissen
+
+- Dieselbe Ursache betrifft noch einzelne Werte in den Aussichten und im PDF-Bericht — die werden in einem eigenen Schritt nachgezogen.
 
 ---
 
