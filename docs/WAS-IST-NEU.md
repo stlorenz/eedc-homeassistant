@@ -1,11 +1,24 @@
 # Was ist neu
 
-> **Stand:** Mai 2026 (v3.34.7)
+> **Stand:** Mai 2026 (v3.34.8)
 > **Diese Seite** zeigt pro Version, was sich für dich als Anwender geändert hat — kürzer als der technische [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md), ausführlicher als die Schnellübersicht-Tabelle in der [Übersicht](BENUTZERHANDBUCH.md#was-ist-neu-seit-v316).
 >
 > **Kein Banner, kein Pop-up:** eedc zeigt diese Liste nicht ungefragt an. HA-App-Nutzer sehen den Changelog ohnehin schon im Add-on-Store, GitHub-Releases haben einen eigenen. Wer wissen will, was neu ist, schaut hier rein — Pull statt Push.
 >
 > **Lesehinweis:** Die jüngsten Versionen stehen oben. Jeder Punkt verlinkt entweder auf die zuständige Hilfe-Sektion oder direkt auf die App-Funktion (sofern erreichbar). Anker-URLs (`?doc=was-ist-neu`) sind teilbar.
+
+---
+
+## v3.34.8 — E-Auto-Ersparnis im Cockpit nutzt den echten Monats-Benzinpreis (Mai 2026)
+
+### Was sich für dich ändert
+
+- **„Ersparnis vs. Benziner" zeigt in allen Ansichten denselben Wert.** Bisher rechnete die Cockpit-Übersicht (E-Mobilität / E-Auto) mit einem festen Benzinpreis-Default, während Monatsberichte und E-Auto-Dashboard den tatsächlichen monatlichen Kraftstoffpreis (aus dem EU Weekly Oil Bulletin) verwendeten — daher unterschiedliche Ersparnis-Zahlen. Jetzt nutzen alle Ansichten denselben monatsgenauen Preis.
+- Tipp: Falls die monatlichen Kraftstoffpreise bei dir leer sind, kannst du sie über Einstellungen → Daten → Reparatur-Werkbank → „Kraftstoffpreis-Backfill" nachtragen.
+
+### Mit Dank an
+
+- NongJoWo fürs hartnäckige Nachrechnen, das die Fehlerquelle exakt eingegrenzt hat.
 
 ---
 

@@ -7,6 +7,20 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [3.34.8] - 2026-05-29 — Cockpit-Übersicht: E-Auto-Ersparnis mit Monats-Benzinpreis (#260)
+
+> 🐛 **Letzter Drift-Fix zu #260 (NongJoWo).** Die Benzin-Ersparnis in der Cockpit-Übersicht (E-Mobilität- + E-Auto-Sektion) wurde mit dem **statischen Investitions-Parameter-Benzinpreis** (1,80 €-Default) gerechnet, während Monatsberichte und E-Auto-Dashboard den **pro Monat** aus dem EU Weekly Oil Bulletin gepflegten Preis (`Monatsdaten.kraftstoffpreis_euro`, seit v3.17.0) nutzen → zwei Sichten, zwei Zahlen. Read-Site-Drift, **kein Aggregator-Schreibpfad**.
+
+### Fixed
+
+- **Cockpit-Übersicht ruft `berechne_eauto_ersparnis_periode`** (den bereits fürs E-Auto-Dashboard eingeführten #260-Periode-Helper) mit km **pro Monat** + Monats-Benzinpreis-Lookup, statt des Skalar-Helpers mit Einmal-Param-Preis. `benzin_kosten = Σ (km_monat × Vergleichsverbrauch × Preis_monat)`, km-gewichtet; Fallback pro Monat auf Param-Preis → Default. Damit zeigen Übersicht, E-Auto-Dashboard und Monatsberichte denselben Wert. Der Dienstwagen-Filter (`ist_dienstlich`) bleibt vorgelagert.
+
+### Test
+
+- Neue Datei `test_cockpit_uebersicht_benzinpreis_260.py` (2 Tests): Monatspreis 1,50 € → Ersparnis 105 € (nicht 126 € aus Param-Default); ohne Monatspreis korrekter Param-Fallback. Suite **584 grün** (582 + 2).
+
+---
+
 ## [3.34.7] - 2026-05-29 — HA-Export: Eigenverbrauchsquote bei IMD-Setups korrekt (#304, Teil 1)
 
 > 🐛 **Fix des gemeldeten HA-Export-Symptoms** (Teil 1 von #304). Der HA-Export-Sensor `eigenverbrauch_quote_prozent` zeigte **2,2 % statt ~40 %** (und `eigenverbrauch_gesamt_kwh` 830 statt ~15.000). Ursache: HA-Export sourcte die PV-Erzeugung korrekt aus `InvestitionMonatsdaten`, las aber Eigen-/Direkt-/Gesamtverbrauch aus den **berechneten Legacy-Feldern** in `Monatsdaten` — die bei modernen IMD-basierten Setups leer bleiben (nur CSV/JSON-Import füllt sie). Reiner Read-/Berechnungs-Fix, **kein Aggregator-Schreibpfad**.
