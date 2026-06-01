@@ -39,18 +39,56 @@ Sub-Tabs in chronologischer Reihenfolge:
 | Tab | Inhalt | Heute entspricht |
 |---|---|---|
 | **Live** | Echtzeit-Verläufe, Live-Tiles pro Komponente | `LiveDashboard.tsx` |
-| **Heute** | Tages-KPIs + heutiger Verlauf bis jetzt | NEU — heutiger Stand kondensiert |
-| **Monatsbericht** | Aktueller Monatsstand mit allen Sektionen | `MonatsabschlussView.tsx` |
-| **Jahr** | Jahres-KPIs + Monats-Vergleichs-Verlauf | Teile aus `Auswertung.tsx` Tab „Energie" |
+| **Tag** | Tages-Bilanz im universellen Muster · **Tages-Selektor** (default heute, zurück bis Anschaffungsdatum, ‹ ›-Tagesnavigation analog Monat) | NEU — hebt die heutige Energieprofil-Tagessicht aus den Einstellungen hierher; Quelle `/energie-profil/{id}/tage`+`/stunden` |
+| **Monat** *(vormals „Monatsbericht")* | Aktueller Monatsstand mit allen Sektionen | `MonatsabschlussView.tsx` |
+| **Jahr/Gesamt** | Anlage-weite Bilanz im **gleichen** Seiten-Muster wie die Monat-Sicht (KPI-Strip Energie-Bilanz + Effizienz-Quoten · Verlauf · klapp-/sortierbare Komponenten-Sektionen mit Cross-Links). **Zeitraum-Selektor: einzelnes Jahr / Gesamtlaufzeit.** | `Auswertung.tsx` Tab „Energie" + die anlage-weiten KPIs der alten `Dashboard.tsx` |
 | **Aussicht** | Kurzfrist / Prognosen / Langfrist / Trend | `Aussichten.tsx` (interne 5 Tabs konsolidiert) |
+
+> **✅ Entschieden (2026-06-01): Die heutige Cockpit-Übersichts-*Seite* (`Dashboard.tsx`, Route `/cockpit`) wird aufgelöst, nicht in eine neue Sonderseite umbenannt.** Begründung: Das am Monatsbericht bewährte und [oben](#L47) als universell beschlossene Cockpit-Seiten-Muster (KPI-Strip → Hauptblock → klapp-/sortierbare Sektionen) macht eine separate „Übersicht" **redundant** — ihr Zweck („anlage-weiter Überblick") entsteht automatisch, sobald **jede** Zeit-Ansicht (Tag/Monat/Jahr) für ihren Zeitraum denselben anlage-weiten KPI-Strip + dieselben Komponenten-Sektionen zeigt. Eine eigene Aggregat-Seite mit Sonder-Layout würde genau die Inkonsistenz wieder einführen, die v4.0.0 beseitigt.
+> **Inhalts-Verteilung der alten Übersicht:** anlage-weite KPIs (Energie-Bilanz, Effizienz-Quoten) werden Teil des universellen KPI-Strips **jeder** Zeit-Ansicht; pro-Komponenten-Teaser → Cross-Links nach Komponenten/`<typ>`; Amortisations-Bar → Auswertungen/ROI.
+> **Gesamtlaufzeit-Horizont:** bleibt erhalten, aber **nicht** als eigene Seite — als **Zeitraum-Option im „Jahr/Gesamt"-Tab** (Jahr ↔ Gesamtlaufzeit umschaltbar), gerendert im selben universellen Muster. So überlebt die kumulierte Bilanz, ohne ein Sonder-Layout zu sein. *(Offen: ob „Gesamt" überhaupt nötig ist oder Jahr genügt — siehe unten.)*
+> **Landing unverändert:** `/` und Klick auf „Cockpit" → `/cockpit/live` (ist schon heute so, `Dashboard.tsx` war nie Landing).
+
+> **✅ Entschieden (2026-06-01): Tag-Sicht (vormals „Heute") — vollwertiges Geschwister von Monat/Jahr.** Statt „nur heute, kondensiert" eine echte Tages-Ansicht im universellen Muster mit **Tages-Selektor** (default heute, Untergrenze = Anschaffungsdatum, Tagesstreifen + Kalender + ‹ ›-Tagesnavigation analog Monat). **Strikt IST** (gemessene Tagesbilanz, keine Prognose-Elemente — der Soll-Ist-Abgleich des Tages lebt per Cross-Link in Aussicht). Datenquelle ist der Energieprofil-Pfad (`/energie-profil/{id}/tage`+`/stunden`) — bewusst **eine andere Quelle als die Monat-Sicht** (`/aktueller-monat`), gleiches Seiten-Muster darüber. Damit bekommt die heute in den Einstellungen vergrabene Tagessicht ihre kanonische Heimat in der Zeit-Achse. *(Stunde ist die innere Auflösung von Tag — kein eigener Stunden-Tab; Live bleibt der Echtzeit-Modus.)*
 
 **Cockpit-Innenseiten-Pattern (Top-Down):**
 
 1. KPI-Strip oben — die 3–4 wichtigsten Zahlen der Zeitebene
-2. Visueller Hauptblock (Chart, Tile-Grid, Verlauf)
-3. Detail-Sektionen darunter, jeweils mit Cross-Link zur entsprechenden Komponenten-Seite
+2. Visueller Hauptblock — **zwei umschaltbare Linsen im selben Slot:** *Verlauf* („wann?", Zeitraum → Unter-Einheit) ⇄ *Fluss* („wohin?", EnergyFlowDiagram). Default je Zeitraum getunt: Live → Fluss (Echtzeit), Tag/Monat/Jahr → Verlauf.
+3. **Werte/Tabelle-Sektion** — der numerische Zwilling des Verlaufs (siehe unten)
+4. Detail-Sektionen darunter, jeweils mit Cross-Link zur entsprechenden Komponenten-Seite
+
+**Sektionen klapp- und sortierbar (an den Zeitraum gebunden):** Die Detail-Sektionen nutzen das im Monatsbericht etablierte Muster — auf-/zuklappbar **und** per ↑↓ in eine persönliche Reihenfolge bringbar, Zustand pro Sicht persistiert. Dieses Muster ist bei den Testern gut angekommen (Monatsbericht-Rückmeldung) und wird hier bewusst auf alle Cockpit-Zeitsichten ausgeweitet. **Abgrenzung:** Das ist *kein* Widget-Builder/„My-Sites" (frei wählbare Bausteine bleiben aus dem Scope, siehe Style-Guide Einstellbarkeits-Cap) — sortiert wird nur der *feste* Sektionssatz. Umgesetzt über **einen** Persistenz-SoT (Style-Guide B6), nicht die heutige Doppel-Logik.
+
+> **✅ Entschieden (2026-06-01): Hauptblock = zwei Linsen.** Löst den Konflikt „Energiefluss vs. Verlauf" auf — beide leben als Umschalter im selben Slot statt sich auszuschließen. Revidiert die frühere „EnergyFlow-only"-Festlegung (Inventur unten).
+
+**Werte/Tabelle-Sektion (numerischer Zwilling):** Jede Zeit-Sicht trägt zusätzlich eine **verschiebbare, klappbare „Werte/Tabelle"-Sektion** — der numerische Zwilling des Verlaufs (gleiche Unter-Einheiten als Zeilen: Tag→Stunden, Monat→Tage, Jahr→Monate), mit der Vergleichslogik `[Zeitraum | Vergleichszeitraum | Δ]`. Es ist **dieselbe** Tabellen-Komponente wie in Auswertungen/Tabelle, nur kontext-skaliert (**eine SoT**, kein zweiter Tabellen-Code — wie KPICard B9). **Auswertungen/Tabelle bleibt die volle Werkbank** (alle Komponenten, voller Spalten-Picker, kanonischer CSV); die eingebetteten Sektionen sind scoped Lese-Ausschnitte + Cross-Link „alle Werte / Export →". **Grenze:** ein Vergleichszeitraum wählbar + Spalten-Picker — **keine** freie Mehrfachauswahl beliebiger Jahre/Monate (in #195 verworfen), kein eigener „Vergleich"-Tab. *(Bedient den durchgängigen Wunsch nach Auswertungs-Tabellen im Kontext, aus dem Forum / #195.)*
 
 **Aussicht-Konsolidierung:** Die heutigen Aussichten-Sub-Tabs (Kurzfristig / Prognosen / Langfristig / Trend / Finanzen) werden im Cockpit/Aussicht-Tab zu einer linearen Seite mit Zeit-Horizont-Selektor (7 Tage / 14 Tage / Monat / Jahr) und Sektionen. „Finanzen-Prognose" wandert nach Auswertungen/Finanzen — analytischer Schnitt, gehört dort hin.
+
+### Auflösung der Übersichts-Seite — Inventur-Mapping (2026-06-01)
+
+Vollständige Inventur von `Dashboard.tsx` (alte Cockpit-Übersicht, 630 Z.), damit beim Auflösen nichts verloren geht. Jedes Element hat eine Achsen-gerechte Heimat — **Komponenten ist Auffangbecken nur für die pro-Komponenten-Inhalte, nicht für anlage-weite oder analytische** (sonst würde die gerade getrennte Achsen-Vermischung nur verschoben).
+
+| Element der alten Übersicht | Art | Heimat |
+|---|---|---|
+| Energie-Bilanz (PV, Verbrauch, Netzbezug, Einspeisung) | anlage-weit | Cockpit — universeller KPI-Strip jeder Zeit-Ansicht |
+| Effizienz-Quoten (Autarkie, EV, Direktverbrauch, spez. Ertrag) | anlage-weit | Cockpit — KPI-Strip |
+| HeroLeiste (Top-3 + Vorjahresvergleich) | anlage-weit | Cockpit — Kopf des KPI-Strips |
+| **EnergyFlowDiagram** (anlage-weiter Energiefluss) | anlage-weit | Cockpit — die **Fluss-Linse** des Hauptblocks (neben der Verlauf-Linse, siehe „Hauptblock = zwei Linsen" oben), pro Zeitraum aggregiert; Default-Linse in Live |
+| Speicher / Wärme/Klima / Sonstiges / E-Mobilität (je 4 KPIs) | pro-Komponente | **Komponenten/`<typ>`** (Detail) + Teaser-Cross-Link im Zeit-View |
+| Finanzen (Erlös, §51-Verlust, EV-Ersparnis, Netzkosten, USt, Netto-Ertrag) | analytisch | Auswertungen/Finanzen |
+| Jahres-Rendite + AmortisationsBar | analytisch | Auswertungen/ROI |
+| CO₂-Bilanz (PV, WP, E-Mob, gesamt) | analytisch | Auswertungen/CO₂ |
+| Jahres-/Zeitraum-Selektor + Zeitraum-Info | Steuerung | Zeitraum-Selektor der Zeit-Ansicht (Jahr ↔ Gesamt) |
+| **`GettingStarted`** (Empty-State, keine Anlage) | Onboarding | Cockpit-Leerzustand (Style-Guide B8) |
+| **Multi-Anlagen-Selektor** (bei >1 Anlage) | Steuerung | global/Layout — Audit unter B12 (Single-Anlage-Selektor) |
+| **Social-Media-Text-Export** (Share-Button + `ShareTextModal`) | Aktion | **zeitraum-gebundene Cockpit-Aktion** (siehe unten) |
+| QuickLinks (Monatsdaten/Auswertungen/Investitionen) | Navigation | entfällt — durch neue Top-Nav + Einstellungs-Kachelgrid redundant |
+
+**Social-Media-Text-Export — zeitraum-gebunden (2026-06-01):** Der Teilen-Button wird eine **Cockpit-Aktion pro Zeit-Ansicht** (nicht Community): er teilt den jeweils gewählten Zeitraum — Tag (gewählter Tag) / Monat (gewählter Monat) / Jahr (gewähltes Jahr bzw. Gesamtlaufzeit). **Scope-Trennung (wichtig, [v4.0.0 = reine Struktur](#L233)):**
+> - **In v4.0.0 (reine IA):** nur die **Platzierung** als zeitraum-gebundene Aktion, mit der **heute vorhandenen** Fähigkeit (Monat — `social.py` ist bereits monatsbasiert). Kein neuer Generierungs-Code.
+> - **Eigenes Feature-Bündel (post-v4.0.0):** die **zeitraum-adaptive Text-Generierung**. Aufwand gestaffelt — Monat: vorhanden; **Jahr/Gesamt:** moderater Backend-Zusatz (Aggregations-Zweig + Vorlage); **Tag:** größer (eigener Tages-Datenpfad statt `Monatsdaten`, nur wo Tagesdaten existieren). Funktionale Erweiterung, gehört nicht in den Struktur-Schnitt.
 
 ---
 
@@ -79,8 +117,9 @@ Tabs erscheinen nur, wenn die Anlage die jeweilige Komponente hat (strukturell N
   [Tages-/Monatschart je nach Datums-Selektor]
   [Detailtabelle, default zu]
 
-▼ Vergleich
-  [Vorjahr / Vormonat]
+▼ Vergleich   [Diagramm ⇄ Tabelle]
+  [Diagramm: Vorjahr/Vormonat · Saison-Toggle (Winter/Heizperiode/Sommer), wetternormalisiert]
+  [Tabelle: komponenten-scoped Werte – Jahr | Vergleichsjahr | Δ]
 
 ▼ Aussicht
   [Komponentenspezifische Prognose: wann voll/leer, Empfehlung]
@@ -89,8 +128,9 @@ Tabs erscheinen nur, wenn die Anlage die jeweilige Komponente hat (strukturell N
 **Designentscheidungen:**
 
 - **Datums-Selektor statt Sub-Sub-Tabs:** Eine Achsen-Kontrolle oben, alle Sektionen folgen dem Datum. Mobile-tauglich (kein Sub-Sub-Tab-Layout, keine doppelte Zeit-Achse zur Cockpit-Zeit-Achse).
-- **Lineare Sektion-Reihenfolge:** Status → Verlauf → Vergleich → Aussicht. Vier Sektionen sind genug und stabil über alle Komponententypen — keine komponentenspezifische Sondersortierung.
-- **Energieprofil verschwindet als eigenständige Seite:** Stündlicher Verlauf wird Teil der „Verlauf im Zeitraum"-Sektion, komponentenspezifisch (Strom-Profil bei PV-Anlage, Wärme-Profil bei Wärmepumpe).
+- **Lineare Sektion-Reihenfolge (hier bewusst fix):** Status → Verlauf → Vergleich → Aussicht. Vier Sektionen sind genug und stabil über alle Komponententypen — keine komponentenspezifische Sondersortierung. **Bewusster Unterschied zu den Cockpit-Zeitsichten:** Dort sind die Sektionen sortierbar (gut angekommenes Monatsbericht-Muster), im Komponenten-Hub *nicht* — die typ-übergreifende Stabilität ist hier der höhere Wert (man findet dieselbe Sektion bei jedem Komponententyp am selben Platz). Klappbar bleiben die Sektionen auch hier.
+- **Vergleich-Sektion (Saison + Werte):** Die „Vergleich"-Sektion trägt einen **Diagramm ⇄ Tabelle-Umschalter** — *Diagramm* mit Saison-Toggle (Winter/Heizperiode/Sommer) und Wetternormalisierung (Heizgradtage, fairer Mehrjahresvergleich; #195 Punkt 3, primär Wärme/Klima), *Tabelle* = die komponenten-scoped Werte (numerischer Zwilling, eine Tabellen-SoT, siehe Cockpit). Saisonale Mehrjahres-Muster (#110) sind die datengebundene Ausbaustufe.
+- **Energieprofil verschwindet als eigenständige Seite — dreifacher Zielort:** der *anlage-weite* Tagesüberblick → **Cockpit/Tag**; der *komponentenspezifische* Stundenverlauf → „Verlauf im Zeitraum"-Sektion (Strom-Profil PV, Wärme-Profil WP); die *Rohtabelle* → Auswertungen/Tabelle; die **Pflege** (Vollbackfill, Löschen, Reaggregation) → Einstellungen/Daten/Energieprofil-Pflege. **Anzeige ≠ Pflege.**
 - **Komponentenspezifische KPIs** via `lib/komponentenStyle.ts` als SoT (Style-Guide A5 + B9). Erweiterung auf E-Auto/BKW/Wallbox/Sonstiges/PV-Anlage ist Pflicht-Voraussetzung — heute nur WP+Speicher (Disc #163). **Hinweis (2026-05-31):** der SoT wird heute nirgends real konsumiert (Dashboards hardcoden Stil) → A5 zuerst in WP/Speicher einziehen, dann erweitern (sonst toter Code), siehe Style-Guide A5.
 
 ---
@@ -101,11 +141,13 @@ Sub-Tabs als analytische Schnitte über die ganze Anlage:
 
 | Tab | Inhalt | Heute entspricht |
 |---|---|---|
-| **Finanzen** | Ersparnis, Erlös, Strompreis-Historie, Finanzen-Prognose | `Auswertung.tsx`/finanzen + `Aussichten.tsx`/finanzen |
+| **Finanzen** | Ersparnis, Erlös, Strompreis-Historie, Finanzen-Prognose **+ das anlage-weite SOLL/HABEN-T-Konto (aus dem Monatsbericht hierher verlagert), zeitraum-parametrisiert (Tag/Monat/Jahr-Selektor)** | `Auswertung.tsx`/finanzen + `Aussichten.tsx`/finanzen + `MonatsabschlussView` T-Konto |
 | **CO₂** | Bilanz, Vermeidung, **CO₂-Amortisation** (#284) | `Auswertung.tsx`/co2 |
 | **ROI** | Investitions-ROI, Kumuliert, Aussichten | `ROIDashboard.tsx` |
-| **Tabelle** | Rohdaten-Übersicht, CSV-Export | `Auswertung.tsx`/tabelle |
+| **Tabelle** (volle Werkbank) | Rohdaten über alle Komponenten, voller Spalten-Picker, Jahr-vs-Jahr `[Wert \| Vergleichsjahr \| Δ]` (#195), kanonischer CSV-Export. *Scoped* Ausschnitte derselben Tabelle leben eingebettet in Cockpit/Komponenten (Werte/Tabelle-Sektion) | `Auswertung.tsx`/tabelle |
 | **Prognose-vs-IST** | Genauigkeits-Tracking, Bias, Quellen-Vergleich | `PrognoseVsIst.tsx` |
+
+> **✅ Entschieden (2026-06-01): Finanzen-Verortung (F2-a).** Das anlage-weite Finanz-T-Konto — heute der dominante Block des Monatsberichts — zieht **hierher** (Finanzen = analytischer Schnitt = Wie-Achse). Die Cockpit-Zeit-Sichten behalten nur einen **kompakten Finanz-KPI** (Netto-Ertrag, Ersparnis) im KPI-Strip + Cross-Link „volle Finanzrechnung →". *Auflage:* die konsolidierte Finanzrechnung muss die **sonstigen Positionen aus der Monatsauswertung** mit einsammeln (#310). Pro-Komponente-Geldwerte (z. B. WP-Ersparnis vs. Gas) bleiben Teaser in den Komponenten-Sektionen; nur das **anlage-weite** T-Konto wandert. **Folge-Entscheidung (2026-06-01):** der Cockpit-Tab heißt künftig „**Monat**" (nicht „Monatsbericht") — der namensgebende finanzielle *Abschluss* sitzt jetzt in Auswertungen/Finanzen.
 
 **Was aus heutigem Auswertungen wegfällt:**
 
@@ -150,8 +192,8 @@ Verbindet die drei Achsen ohne Doppelung der Inhalte.
 | Klick auf | Springt zu |
 |---|---|
 | Komponenten-Tile in Cockpit/Live | `/komponenten/<typ>` |
-| KPI-Kachel im Cockpit/Heute | entsprechende Auswertung (Finanzen-KPI → Auswertungen/Finanzen) |
-| Zeile in Auswertungen/Tabelle für Monat M | `/cockpit/monatsbericht` mit Datum M |
+| KPI-Kachel im Cockpit/Tag | entsprechende Auswertung (Finanzen-KPI → Auswertungen/Finanzen) |
+| Zeile in Auswertungen/Tabelle für Monat M | `/cockpit/monat` mit Datum M |
 | Komponenten-KPI „Erlös" | `/auswertungen/finanzen` |
 | Komponenten-KPI „CO₂" | `/auswertungen/co2` |
 | Vorschau in Cockpit/Aussicht für Komponente X | `/komponenten/<x>` Sektion „Aussicht" |
@@ -178,7 +220,7 @@ Cross-Links visuell dezent (Pfeil-Icon rechts neben KPI-Wert oder Sektion-Header
 ### Phase 1 — v4.0.0 IA-Refactor (ein Release)
 
 1. Top-Nav umstellen: Live raus (wird Cockpit/Live), Aussichten raus (wird Cockpit/Aussicht), Komponenten als neuer Top-Eintrag.
-2. Cockpit-Sub-Tabs Live/Heute/Monatsbericht/Jahr/Aussicht implementieren.
+2. Cockpit-Sub-Tabs Live/Tag/Monat/Jahr/Aussicht implementieren (inkl. Verlauf⇄Fluss-Hauptblock + Werte/Tabelle-Sektion).
 3. Komponenten-Hub-Seiten pro Typ implementieren (lineare Variante C).
 4. Auswertungen entrümpeln (Tabs Komponenten/PV-Anlage/Investitionen/Energie/Energieprofil raus, Tabs Finanzen/CO2/ROI/Tabelle/Prognose-vs-IST).
 5. Einstellungs-Landing als Kachel-Grid mit Suche + Status.
@@ -211,8 +253,9 @@ Alle Bestandspfade müssen redirected werden — Foren-Posts, Memory-Pfade, Issu
 |---|---|
 | `/live` | `/cockpit/live` |
 | `/cockpit` | `/cockpit/live` (Default-Landing) |
-| `/cockpit/aktueller-monat` | `/cockpit/monatsbericht` |
-| `/cockpit/monatsberichte` | `/cockpit/monatsbericht` |
+| `/cockpit/aktueller-monat` | `/cockpit/monat` |
+| `/cockpit/monatsberichte` | `/cockpit/monat` |
+| `/cockpit/monatsbericht` | `/cockpit/monat` |
 | `/cockpit/pv-anlage` | `/komponenten/pv-anlage` |
 | `/cockpit/e-auto` | `/komponenten/e-auto` |
 | `/cockpit/waermepumpe` | `/komponenten/waermepumpe` |
@@ -223,6 +266,7 @@ Alle Bestandspfade müssen redirected werden — Foren-Posts, Memory-Pfade, Issu
 | `/aussichten` | `/cockpit/aussicht` |
 | `/auswertungen` | `/auswertungen/finanzen` (oder erste verfügbare Sub) |
 | `/auswertungen/prognose` | `/auswertungen/prognose-vs-ist` |
+| `/einstellungen/energieprofil` | `/cockpit/tag` (Anzeige aufgeteilt — Rohtabelle → `/auswertungen/tabelle`, Pflege → `/einstellungen/energieprofil-pflege`) |
 
 Konventions-Regel: jede Bestandsroute kriegt einen `Navigate replace` in `App.tsx`. Keine 404s.
 
@@ -230,8 +274,9 @@ Konventions-Regel: jede Bestandsroute kriegt einen `Navigate replace` in `App.ts
 
 ## Was bewusst NICHT im v4.0.0-Scope ist
 
-- **Funktionale Erweiterungen** — v4.0.0 ist reine Struktur + Designsprache. Inhalts-Features (z. B. CO₂-Amortisation #284) sind eigene Bündel.
-- **Theme-Editor / freie Card-Anordnung / Dichte-Profile** — siehe Style-Guide „Einstellbarkeits-Cap" (Hell/Dunkel-Mode + Mobile-Reduce-Default sind die einzigen Achsen).
+- **Funktionale Erweiterungen** — v4.0.0 ist reine Struktur + Designsprache. Inhalts-Features (z. B. CO₂-Amortisation #284, **HDD-Wetternormalisierung #195 P3, saisonale Mehrjahres-Muster #110**) sind eigene, teils datengebundene Bündel — die Struktur gibt ihnen nur die Heimat.
+- **Theme-Editor / freie Card-/Widget-Anordnung (Dashboard-Builder, „My-Sites") / Dichte-Profile** — siehe Style-Guide „Einstellbarkeits-Cap" (Hell/Dunkel-Mode + Mobile-Reduce-Default sind die einzigen Achsen). **Klarstellung (2026-06-01):** Das *Umsortieren des festen Sektionssatzes* in den Cockpit-Zeitsichten ist davon ausgenommen und ausdrücklich erlaubt — es ist kein Builder.
+- **Eigene „Vergleich"-Rubrik / Free-Select** — Vergleich ist ein **Modus innerhalb** der Achsen (Verlauf-Linse, Saison-Toggle, Werte/Tabelle-Sektion), **kein** eigener Top-Tab; die freie Mehrfachauswahl beliebiger Jahre/Monate bleibt draußen (in #195 verworfen). „Vergleichszeitraum wählen" ist erlaubt, „beliebig viele frei anhaken" nicht.
 - **Backend-Refactor** — Achsen-Trennung passiert rein im Frontend. Routen + Read-Sites verlinken, sonst keine Berechnungs-Änderungen.
 - **Performance-Optimierung** (Code-Splitting, Lazy Loading) — separater Refactor-Sprint.
 - **Bottom-Tab-Bar auf Mobile** — Hamburger reicht.
@@ -248,6 +293,7 @@ Konventions-Regel: jede Bestandsroute kriegt einen `Navigate replace` in `App.ts
 | HA-Companion-App-Quirks (Sticky-Header, Downloads, `h-dvh`) | Querschnittsregeln aus Mobile-Konzept M4+M5 in Pflicht-Checkliste pro neuer Seite |
 | Tab-Inflation kehrt zurück (Auswertungen hatte 8 Tabs) | Pro Top-Eintrag ≤ 5 Sub-Tabs als Designregel. Tab-Zuwachs braucht explizite Genehmigung in #243 |
 | Community-Top-Eintrag hat heute 6 Sub-Tabs (> 5) | **✅ Entschieden (2026-05-31): konsolidieren auf ≤ 5** (keine Ausnahme) — konkrete Zusammenlegung im Umsetzungs-Design |
+| Tester sucht das Finanz-T-Konto im Monatsbericht (F2-a verlagert es) | Prominenter Cross-Link aus jeder Zeit-Sicht + „Wo ist X hin?"-Eintrag; Finanz-KPI (Netto-Ertrag, Ersparnis) bleibt im KPI-Strip sichtbar |
 
 ---
 
@@ -258,3 +304,4 @@ Konventions-Regel: jede Bestandsroute kriegt einen `Navigate replace` in `App.ts
 - **Operativer Bausteine-Tracker** → [#243](https://github.com/supernova1963/eedc-homeassistant/issues/243)
 - **Speicher-Auswertungs-Inhalte (B11 alt → Komponenten-Hub-Inhalt)** → [#142](https://github.com/supernova1963/eedc-homeassistant/issues/142) · [`KONZEPT-SPEICHER-AUSWERTUNG.md`](KONZEPT-SPEICHER-AUSWERTUNG.md)
 - **CO₂-Amortisation** → [#284](https://github.com/supernova1963/eedc-homeassistant/issues/284)
+- **Saison-/Mehrjahresvergleich (Werte-Tabelle, Wetternormalisierung)** → [#195](https://github.com/supernova1963/eedc-homeassistant/issues/195)

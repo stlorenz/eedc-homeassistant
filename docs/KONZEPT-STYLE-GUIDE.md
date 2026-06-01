@@ -43,10 +43,12 @@ eedc bekommt **keine** umfangreichen Personalisierungs-Optionen. Bewusste Design
 
 - Theme-Editor, freie Akzentfarben-Wahl.
 - Dichte-Profile (kompakt / luftig).
-- Freie Card-Anordnung pro Seite.
+- **Freie Card-/Widget-Anordnung pro Seite** — Dashboard-Builder / „My-Sites" mit frei wählbaren, neu zu bildenden Bausteinen. **Nicht** gemeint: das Umsortieren eines *festen* Sektionssatzes (siehe Klarstellung unten).
 - Font-Größen-Schieber, Layout-Slider.
 
-> **✅ Entschieden (2026-05-31): Rückbau im v4.0.0-Schnitt.** Das Bestandsfeature `SortableSection`/`OrderedSections` (↑↓-Reorder + LocalStorage, live in WP-/PV-/Monatsabschluss-Dashboard, #175) wird entfernt — der Cap bleibt streng, „freie Card-Anordnung" gibt es auch nicht als Bestand. `CollapsibleSection` wird die einzige Sektions-Persistenz (siehe B6). detLAN (#175) per Release-Notes / „Wo ist X hin?" informieren. Prinzip: aufräumen + vereinheitlichen statt Sonderpfad konservieren.
+> **⚠️ Korrektur (2026-06-01): „Reorder" war fälschlich mit „freie Card-Anordnung" gleichgesetzt.** Die 31.05.-Entscheidung hat zwei verschiedene Dinge in einen Topf geworfen: den verbotenen **Widget-Builder/My-Sites** (frei wählbare Bausteine — bleibt aus dem Scope) und das harmlose **Umsortieren eines festen Sektionssatzes** (die immer gleichen Sektionen per ↑↓ in eine persönliche Reihenfolge bringen). Letzteres ist **kein** Cap-Verstoß und wird **rehabilitiert** — das Muster kam bei den Testern gut an (Monatsbericht).
+>
+> **✅ Neu-Entscheidung (2026-06-01):** Sektions-Reorder bleibt als bewusst *enge* Personalisierung erhalten, aber **vereinheitlicht**: nicht die heutige Doppel-Logik (`CollapsibleSection` + `SortableSection` mit je eigenem Key) fortschleppen, sondern **ein** Persistenz-SoT, der Auf/Zu **und** Reihenfolge zusammen merkt (Auflage „neu bauen statt flicken"). **Differenziert nach Ort:** Cockpit-Zeitsichten (Monatsbericht & Geschwister) klapp- **und** sortierbar; **Komponenten-Hub bleibt fix** (lineare Reihenfolge ist dort eine eigene Designentscheidung, siehe IA-V4 Variante C). detLAN (#175) bleibt damit bedient statt nur „informiert".
 
 Spätere Tester-Wünsche nach „mehr Optionen" verweisen auf diesen Cap. Begründung dokumentiert, kein Trägheits-Argument.
 
@@ -220,7 +222,8 @@ Diese Abschnitte definieren das gemeinsame Fundament, auf dem alle Komponenten i
 
 ### B6 — Aufklapp-Verhalten (`CollapsibleSection`)
 
-> **Persistenz:** Aufklapp-Status pro Sektion in LocalStorage (etabliert für Monatsberichte/Energieprofil-Monat — Vorbild laut detLAN #258 P5). Konsistente Implementierung über alle Verwender. **Drift-Befund (2026-05-31):** `CollapsibleSection` (Key `eedc-collapse-${storageKey}`) und `SortableSection` (Key `${prefix}_section_${title}`) führen je eigene Open-State-Logik — die geforderte Konsistenz ist intern bereits gebrochen. **✅ Entschieden (2026-05-31): `CollapsibleSection` ist der alleinige Persistenz-SoT;** `SortableSection` wird im v4.0.0-Schnitt zurückgebaut (Cap-Entscheidung oben).
+> **Persistenz:** Aufklapp-Status **und Reihenfolge** pro Sektion in LocalStorage (etabliert für Monatsberichte/Energieprofil-Monat — Vorbild laut detLAN #258 P5; Reorder kam gut an). Konsistente Implementierung über alle Verwender. **Drift-Befund (2026-05-31):** `CollapsibleSection` (Key `eedc-collapse-${storageKey}`) und `SortableSection` (Key `${prefix}_section_${title}`) führen je eigene State-Logik — die geforderte Konsistenz ist intern bereits gebrochen.
+> **✅ Entschieden (2026-05-31, korrigiert 2026-06-01): EIN Sektions-Persistenz-SoT.** Statt `SortableSection` ersatzlos zu streichen (das war die ältere, mit dem Cap verwechselte Fassung — siehe Korrektur oben), werden Auf/Zu **und** Reihenfolge in **einem** Mechanismus zusammengeführt (`CollapsibleSection` um die Reorder-Fähigkeit erweitert, `SortableSection` darin aufgelöst). Reorder bleibt also als Funktion erhalten, nur ohne Doppel-Logik. **Geltungsbereich:** Cockpit-Zeitsichten ja; Komponenten-Hub fix (IA-V4 Variante C). detLAN (#175) bleibt bedient.
 > **Default-Open** pro Sektion definieren (datenreich → standardmäßig offen; sekundär → standardmäßig zu).
 > **Mobile-Default** abweichend siehe [KONZEPT-MOBILE.md M1](KONZEPT-MOBILE.md).
 
