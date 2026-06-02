@@ -1,6 +1,8 @@
 # Konzept: Wallbox / E-Auto — Datenarchitektur
 
 > **Status (2026-05-20): Phase 1 (Pool-Konsolidierung) vollständig.** Der ursprüngliche Quick-Fix (v3.25.11: getrennte Akkumulatoren EAuto/WB + **Max-pro-Feld**, siehe Memory `project_pool_fix_emob.md`) hat sich selbst als Drift-Quelle erwiesen: feldweises `max()` über `gesamt`/`pv`/`netz` als drei unabhängige Aufrufe konnte die Felder aus verschiedenen Quellen mischen und einen PV-Anteil > 100 % erzeugen (#262 junky84: Komponenten zeigte 48 % PV + 85 % Netz = 133 %). v3.31.6 ersetzt das Max-pro-Feld durch den SoT-Helper `aggregiere_emob_ladung` (`eedc/backend/services/eauto_wirtschaftlichkeit.py`): die Quelle mit der größeren Heimladung gewinnt die **komplette, in sich konsistente Trias** (`pv + netz == ladung` garantiert). **Alle fünf Read-Sites sprechen jetzt dieselbe Pool-Logik:** Wallbox-Dashboard, Komponenten-Zeitreihe, Cockpit-Übersicht und AktuellerMonat über `aggregiere_emob_ladung`, das E-Auto-Dashboard über `compute_emob_pool_attribution` + `attribute_emob_pool_by_km` (km-anteilige Verteilung, selbe use-wb-pool-Entscheidung). **Phase 2 (Vehicle-Sensor-Mapping) und Phase 3 (Multi-Fahrzeug-Dashboard) noch nicht angefangen** — in Roadmap [#110](https://github.com/supernova1963/eedc-homeassistant/issues/110) als „Ideen / Konzeptphase"-Item; Trigger-Stand siehe Abschnitt »Phase-2-Trigger«.
+>
+> **Update 2026-06-02:** **Phase 2a (kanonische Quelle) ist jetzt mit getroffenen Entscheidungen ausspezifiziert** — siehe Abschnitt »Phase 2a — Umsetzungsplan«. Das ist der beschlossene strukturelle Ausweg aus dem Read-seitigen Heuristik-Flickwerk (zuletzt #262 als 5. Read-Site). Die zwei Daten-Checker-Warnungen, die das Konzept als Brücke vorsah, sind **bereits live** (`_check_emob_pool_pflege` + `_check_sensor_mapping_lts`, `services/daten_checker.py`). **Single Source of Truth für dieses Thema ist dieses Dokument** — keine verstreuten Folgenotizen mehr.
 
 ## Motivation
 
@@ -120,6 +122,7 @@ BMW i4
 - Kein Datenmodell-Umbau nötig
 
 ### Phase 2a: Feldzuordnung geradeziehen (Schulden-getrieben)
+> **Ausspezifiziert 2026-06-02 mit getroffenen Entscheidungen → siehe Abschnitt »Phase 2a — Umsetzungsplan« weiter unten.**
 - Eindeutige Feld-Rollen: die Heimladungs-Trias (`ladung_kwh`/`pv`/`netz`) gehört kanonisch an die **Wallbox** (Infrastruktur misst den Stromfluss), das E-Auto trägt Nutzung + km. Read-Sites lesen die kanonische Quelle statt eines Pools.
 - Migration des bestehenden `verbrauch_daten`-JSON nötig — Daten-Reconnaissance vorher (siehe Daten-Checker-Warnung unten).
 - **Trigger: bereits gefeuert.** Der wiederkehrende evcc-Pool-Patch-Bedarf (#260, #262, ~8 Fix-Commits seit v3.31.0) ist das Symptom der Mehrdeutigkeit; jeder Read-seitige Heuristik-Fix (zuletzt `aggregiere_emob_ladung`) ist nur ein Aufschub. Profitiert auch das 1+1-Setup.
@@ -131,7 +134,7 @@ BMW i4
 - Bestehende `ladung_pv_kwh`/`ladung_netz_kwh` am E-Auto bleiben als Fallback
 - **Trigger: „wenn Vehicle-Sensoren nachgefragt werden"** — hier stimmt die ursprünglich notierte Bedingung (Power-User mit Per-Vehicle-Aufschlüsselung). Bislang nicht erfüllt.
 
-**Daten-Checker-Warnung bei Pool-Pflege-Mismatch:** wenn EAuto + WB beide gepflegt sind und die Werte erkennbar ähnlich (≈ derselbe Stromfluss aus zwei Perspektiven) bzw. beide Felder voll sind aber `WB.ladung_pv_kwh > Σ EAuto.ladung_heim_pv_kwh` ist, INFO/WARNING ausgeben — lenkt den User auf eine bewusste Entscheidung, welche Quelle die Wahrheit liefert. Hintergrund: 2026-05-02 fielen bei Joachim und Gernot inkonsistente Pool-Werte auf (PV-Anteil > 100 %, doppelter `kWh/100km`); der Quick-Fix in v3.25.x machte Max-pro-Feld-Auswahl, was sich selbst als Drift-Quelle erwies und in v3.31.6 durch den Gewinner-Pool `aggregiere_emob_ladung` ersetzt wurde. Die Phase-2-Trennung beseitigt die Doppelzählung strukturell, der Daten-Checker bleibt für Altbestand und Pool-Mode. **Diese Warnung braucht kein neues Datenmodell und ist als eigenständiges Stück vor Phase 2 ziehbar** (siehe »Phase-2-Trigger«: junky84 #262 hatte ~3.300 kWh Streudaten auf der E-Auto-Investition, die der Daten-Checker proaktiv sichtbar gemacht hätte).
+**Daten-Checker-Warnung bei Pool-Pflege-Mismatch (✅ implementiert + live, `_check_emob_pool_pflege`):** wenn EAuto + WB beide gepflegt sind und die Werte erkennbar ähnlich (≈ derselbe Stromfluss aus zwei Perspektiven) bzw. beide Felder voll sind aber `WB.ladung_pv_kwh > Σ EAuto.ladung_heim_pv_kwh` ist, INFO/WARNING ausgeben — lenkt den User auf eine bewusste Entscheidung, welche Quelle die Wahrheit liefert. Hintergrund: 2026-05-02 fielen bei Joachim und Gernot inkonsistente Pool-Werte auf (PV-Anteil > 100 %, doppelter `kWh/100km`); der Quick-Fix in v3.25.x machte Max-pro-Feld-Auswahl, was sich selbst als Drift-Quelle erwies und in v3.31.6 durch den Gewinner-Pool `aggregiere_emob_ladung` ersetzt wurde. Die Phase-2-Trennung beseitigt die Doppelzählung strukturell, der Daten-Checker bleibt für Altbestand und Pool-Mode. **Diese Warnung braucht kein neues Datenmodell und ist als eigenständiges Stück vor Phase 2 ziehbar** (siehe »Phase-2-Trigger«: junky84 #262 hatte ~3.300 kWh Streudaten auf der E-Auto-Investition, die der Daten-Checker proaktiv sichtbar gemacht hätte).
 
 ### Phase 3: Aufschlüsselung im Wallbox-Dashboard (optional)
 - Wenn E-Autos Vehicle-Sensoren haben, kann das Wallbox-Dashboard
@@ -153,6 +156,32 @@ Ein *anderes* Signal wird aber deutlich: der **evcc-Portal-Import erzeugt seit v
 
 - **Phase 2 (neue Felder `ladung_heim_*` + Vehicle-Sensor-Mapping)** — der dokumentierte Trigger ist noch nicht erfüllt (kein Multi-Vehicle-Bedarf), aber das evcc-Import-Churn-Signal nähert sich dem Punkt, an dem die strukturelle Lösung günstiger ist als die nächste Heuristik-Runde. Maintainer-Entscheidung; bei der nächsten evcc-Pool-Meldung neu bewerten.
 - **Ohne Phase 2 vorziehbar:** die oben verortete »Daten-Checker-Warnung bei Pool-Pflege-Mismatch« braucht kein geändertes Datenmodell. Sie hätte junky84s Streudaten proaktiv sichtbar gemacht und ist ein kleines, eigenständiges Stück.
+
+## Phase 2a — Umsetzungsplan (Entscheidungen 2026-06-02)
+
+> Beschlossener struktureller Ausweg aus dem Read-seitigen Heuristik-Flickwerk. **Eigene Umsetzungs-Session** — echtes Release mit Daten-Migration, kein Read-Pfad-Hotfix (Tester-Zyklus, Pre-Release-Daten-Checker-Scan, DB-Backup-Hinweis).
+
+### Leitprinzip
+Die **datenabhängige** Laufzeit-Heuristik (`use_wb_pool` = „größere Heimladung gewinnt", kippt bei Streudaten) wird durch eine **strukturelle, deterministische** Quellen-Regel ersetzt. Die km-anteilige *Attribution* (`attribute_emob_pool_by_km`, `attribute_month_share`) bleibt unverändert — nur das *Raten der Quelle* fällt weg.
+
+### Getroffene Entscheidungen
+1. **Fallback ja.** Nutzer **ohne** Wallbox-Investition (inkl. **Steckerlader**/Schuko — sehr häufig!) behalten die E-Auto-Trias als kanonische Quelle. Kein Breaking Change. Regel: *Wallbox-Investition vorhanden + hat Heimladung → Wallbox ist Quelle; sonst → E-Auto.* Strukturell (existiert eine Wallbox?), nicht magnitudenabhängig → kippt nicht.
+2. **Migration löst automatisch auf, „höherer Wert gewinnt".** Wo historisch BEIDE Seiten Heimladung tragen, gewinnt pro aktivem Monat der **höhere** Heimladungs-Wert als überlebender kanonischer Wert (in die Wallbox geschrieben, E-Auto-Trias geräumt). Nur Fälle, die diese Regel **nicht** sauber auflösen kann (z. B. Total auf der einen, PV-Split nur auf der anderen Seite → keine konsistente Trias bildbar), bleiben stehen und tauchen im Daten-Checker (`_check_emob_pool_pflege`) auf. Ziel: möglichst wenig manuelle Fälle, kein „großer Heiler-Knopf" für das Unauflösbare.
+3. **Nur aktive Monate.** Migration und Auflösung respektieren Anschaffungs-/Stilllegungsdatum (konsistent mit der Aktiv-Filter-Invariante).
+4. **Multi-Wallbox:** Liegen mehrere Wallboxen vor, ist die Wallbox **mit dem größten Ladevolumen** die kanonische Quelle.
+
+### Etappen (Reihenfolge wichtig)
+1. **Kanonischer Read-Helper** `get_emob_heimladung_canonical(...)` in `services/eauto_wirtschaftlichkeit.py` (additiv, strukturelle Regel aus Entscheidung 1; intern weiter `get_emob_pv_netz_kwh`). Erst definieren + Unit-Test.
+2. **7 Read-Sites umstellen** mit **Pflicht-Symmetrie-Test** (alle liefern für dieselbe Anlage denselben Heimladungs-Wert): `api/routes/investitionen/dashboards.py`, `cockpit/uebersicht.py`, `cockpit/komponenten.py`, `aktueller_monat.py`, `ha_export.py`, `services/pdf/builders/jahresbericht.py` (+ `daten_checker.py` als Brücke). Pro Site vorher/nachher gegen die `test_dashboards_evcc_pool_fallback.py`-Fixtures.
+3. **Write-Side kanonisieren:** `monatsabschluss/views.py` + Import-Schreibpfade schreiben Ladung an die Wallbox, wenn eine existiert (Import-Pfade tun das größtenteils schon — prüfen).
+4. **Einmalige Daten-Migration** `services/migrations/migrate_vX_emob_canonical_source.py`, registriert in `core/database.py:_run_data_migrations()` via `_apply_once` (idempotent, Rollback bei Fehler). Wendet Entscheidungen 2–4 an.
+5. **Laufzeit-Heuristik entfernen:** `use_wb_pool`-Magnitudenvergleich raus, sobald alle Read-Sites auf den kanonischen Helper laufen; Pool-Helper nur noch für die km-Attribution.
+
+### Risiken
+DB-Backup-Hinweis vor der Migration; additiv + idempotent; Teil-Umstellung in Schritt 2 nur mit dem Symmetrie-Test absichern (sonst stille Drift); Steckerlader-/Manuell-Nutzer ohne Wallbox müssen unangetastet bleiben. Live-Gegencheck via ha-mcp an Gernots Anlage (hat den Pflege-Konflikt real).
+
+### Phase 2b/3 bleiben getrennt
+Vehicle-Sensor-Mapping (`ladung_heim_*`) + Multi-Fahrzeug-Aufschlüsselung — Trigger „Multi-Vehicle-Bedarf" weiter **nicht** erfüllt. Nicht Teil von 2a.
 
 ## Offene Fragen
 
