@@ -52,6 +52,20 @@ _PROGNOSE_FELDER_RETTEN: tuple[str, ...] = (
 )
 
 
+# Extern-additiv befüllte TZ-Felder, die NICHT vom Wetter-Endpoint, sondern von
+# einem anderen additiven Schreiber stammen und beim Delete-and-Recreate genau
+# so verloren gehen wie die Prognose-Felder (#190-Verlustklasse). Sie gehören
+# bewusst NICHT in `_PROGNOSE_FELDER_RETTEN`: Konformitäts-Test K1 koppelt jene
+# Liste exklusiv an die Wetter-Endpoint-Schreibfelder (`_TZ_SCHREIBFELDER_PROGNOSE`),
+# `kraftstoffpreis_euro` würde sie out-of-sync brechen. Eigene Liste = gleiche
+# Mechanik, ehrliche Semantik. Befüllt via `kraftstoff_preis_service.fill_tagesdaten`
+# (additiv, `is None`-Filter). Issue #319, PLAN §8.1, Audit §10.4
+# (K2-Allowlist-Folge-Diskussion).
+_EXTERN_BEFUELLT_FELDER_RETTEN: tuple[str, ...] = (
+    "kraftstoffpreis_euro",
+)
+
+
 async def aggregate_day(
     anlage: Anlage,
     datum: date,
@@ -299,8 +313,11 @@ async def aggregate_day(
         )
 
     # ── Alte Daten für diesen Tag löschen (Upsert) ────────────────────────
-    # Prognose-Felder vor dem Delete-and-Recreate retten — sie werden
-    # asynchron vom Wetter-Endpoint geschrieben. Siehe _PROGNOSE_FELDER_RETTEN.
+    # Extern befüllte Felder vor dem Delete-and-Recreate retten — sie werden
+    # nicht vom Aggregator gesetzt, sondern asynchron/additiv von anderen
+    # Schreibern: Prognose-Felder vom Wetter-Endpoint (_PROGNOSE_FELDER_RETTEN),
+    # Kraftstoffpreis vom kraftstoff_preis_service (_EXTERN_BEFUELLT_FELDER_RETTEN,
+    # #319). Ohne Rettung gingen sie bei jedem Recreate verloren (#190-Klasse).
     existing_tz = await db.execute(
         select(TagesZusammenfassung).where(
             and_(
@@ -310,7 +327,7 @@ async def aggregate_day(
         )
     )
     existing_tz_row = existing_tz.scalar_one_or_none()
-    preserved_prognose = {}
+    preserved_felder = {}
     # #290 detLAN: bei manueller Reaggregation ohne Stunden-Daten retten wir
     # zusätzlich Komponenten-Aggregate, damit bestehende gute Werte nicht
     # durch eine evtl. falsche Snapshot-Boundary-Diff überschrieben werden
@@ -325,10 +342,10 @@ async def aggregate_day(
         if existing_tz_row and existing_tz_row.komponenten_starts else None
     )
     if existing_tz_row:
-        for field in _PROGNOSE_FELDER_RETTEN:
+        for field in (*_PROGNOSE_FELDER_RETTEN, *_EXTERN_BEFUELLT_FELDER_RETTEN):
             val = getattr(existing_tz_row, field, None)
             if val is not None:
-                preserved_prognose[field] = val
+                preserved_felder[field] = val
 
     await db.execute(
         delete(TagesEnergieProfil).where(
@@ -683,8 +700,8 @@ async def aggregate_day(
             )
         ),
     )
-    # Gerettete Prognose-Felder wiederherstellen
-    for field, val in preserved_prognose.items():
+    # Gerettete extern-befüllte Felder wiederherstellen (Prognose + Kraftstoffpreis)
+    for field, val in preserved_felder.items():
         setattr(zusammenfassung, field, val)
 
     # Etappe 4: TagesZusammenfassung-Source spiegelt die Hauptquelle der
