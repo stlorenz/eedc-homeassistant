@@ -673,15 +673,28 @@ async def aggregate_day(
         # manuell editierte Werte vor Scheduler-Überschreibung geschützt
         # werden. In TZ gibt es keine manuelle Werteingabe; „manuell"
         # bedeutet hier „Werkbank-Trigger" (Source.MANUAL_REPAIR). Der Schutz
-        # greift, weil ein versehentlicher Werkbank-Klick bei nicht
-        # erreichbarem HA-LTS + inkonsistenten Snapshots sonst korrekte Werte
-        # mit None überschriebe. Der Scheduler ist absichtlich nicht
-        # geschützt: ein legitim leerer Tag (Sensor-Ausfall, Offline-Phase)
-        # soll nicht ewig die alte Wahrheit weitertragen, Selbst-Heilung
-        # gilt nur dort. Asymmetrie ist bewusst, aber adaptiert — nicht aus
-        # eigenständigem TZ-Vorfall begründet. Phase B / spätere Etappe
-        # könnte prüfen, ob die Adaption im TZ-Kontext weiterhin gerechtfertigt
-        # ist oder ob Snapshot-Self-Healing den Schutz heute überflüssig macht.
+        # greift GENAU im else-Zweig unten, d. h. wenn `komponenten_summen`
+        # LEER ist (Σ-Hourly = 0, boundary leer) — ein versehentlicher
+        # Werkbank-Klick bei nicht erreichbarem HA-LTS + fehlenden/korrupten
+        # Snapshots würde sonst die alten korrekten Werte mit None
+        # überschreiben. (NICHT geschützt: „Boundary-Diff liefert Müll" — Müll
+        # ist nicht-leer, landet also im if-Zweig; dieses Szenario ist seit
+        # v3.33.0 ohnehin strukturell entschärft, Per-Typ statt Alle-Sensoren-
+        # Summe.) Der Scheduler ist absichtlich NICHT geschützt: ein legitim
+        # leerer Tag (Sensor-Ausfall, Offline-Phase) soll nicht ewig die alte
+        # Wahrheit weitertragen.
+        #
+        # Preserve-Asymmetrie-Prüfung (#318-Begleitung, 2026-06-03): geprüft, ob
+        # das v3.33.0-Snapshot-Self-Healing den Schutz überflüssig macht —
+        # ERGEBNIS: nein. Die Self-Healing-Kaskade in `reader.get_snapshot`
+        # (DB → HA-Statistics → MQTT) heilt Stufe 2 NUR bei `ha_svc.is_available`;
+        # in genau der geschützten Konstellation (HA unerreichbar) fällt sie aus,
+        # und für historische Tage läuft der Scheduler nie nach → ohne Preserve
+        # permanenter komponenten_kwh-Verlust eines Alttags. Bekannte Grenze:
+        # der Schutz ist partiell (nur komponenten_kwh/_starts, nicht
+        # ueberschuss/defizit/Peaks). Sauberere Lösung wäre, dass die Werkbank
+        # quellenlose Tage überspringt statt zu überschreiben — eigener Schnitt,
+        # bewusst nicht hier.
         komponenten_kwh=(
             {k: round(v, 2) for k, v in komponenten_summen.items()}
             if komponenten_summen
