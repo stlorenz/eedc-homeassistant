@@ -251,6 +251,7 @@ class DatenChecker:
         ergebnisse.extend(await self._check_datenquelle_drift(anlage))
         ergebnisse.extend(await self._check_pv_ueber_erfassung(anlage))
         ergebnisse.extend(self._check_emob_pool_pflege(anlage))
+        ergebnisse.extend(self._check_emob_sensor_doppelmapping(anlage))
 
         # Zusammenfassung
         zusammenfassung = {"error": 0, "warning": 0, "info": 0, "ok": 0}
@@ -2442,4 +2443,67 @@ class DatenChecker:
                 ),
             ))
 
+        return ergebnisse
+
+    def _check_emob_sensor_doppelmapping(self, anlage: Anlage) -> list[CheckErgebnis]:
+        """Gleiche Sensor-Entity an Wallbox UND E-Auto gemappt → Doppelzählung.
+
+        Ist dieselbe HA-Entity (Live-`leistung_w` oder ein kWh-Zähler) sowohl
+        einer Wallbox- als auch einer E-Auto-Investition zugeordnet, messen beide
+        denselben Ladestrom. Der Live-Energiefluss dedupliziert das (Wallbox-
+        Priorität), aber die Monats-/Stunden-Aggregation poolt nur über
+        `parent_investition_id` — ohne gesetzten Link zählt sie die Ladung
+        DOPPELT (#314-Untersuchung). Deterministische Diagnose aus dem
+        `sensor_mapping`: lenkt den Anwender darauf, eine der beiden Zuordnungen
+        zu entfernen. Brücke vor Phase 2a (kanonische Quelle),
+        docs/KONZEPT-WALLBOX-EAUTO.md.
+        """
+        kat = CheckKategorie.EMOB_POOL_PFLEGE.value
+        mapping = anlage.sensor_mapping or {}
+        inv_mapping = mapping.get("investitionen", {}) or {}
+        typ_by_id = {str(i.id): i.typ for i in anlage.investitionen}
+        name_by_id = {str(i.id): i.bezeichnung for i in anlage.investitionen}
+
+        # Alle einer Investition zugeordneten Entity-IDs einsammeln (Live-Strings
+        # + Zähler-`sensor_id`), dann Entity → nutzende Investitionen invertieren.
+        entity_use: dict[str, set[str]] = {}
+        for inv_id, inv_data in inv_mapping.items():
+            if not isinstance(inv_data, dict):
+                continue
+            entities: set[str] = set()
+            live = inv_data.get("live")
+            if isinstance(live, dict):
+                entities.update(str(v) for v in live.values() if v)
+            felder = inv_data.get("felder")
+            if isinstance(felder, dict):
+                for cfg in felder.values():
+                    if (isinstance(cfg, dict) and cfg.get("strategie") == "sensor"
+                            and cfg.get("sensor_id")):
+                        entities.add(str(cfg["sensor_id"]))
+            for eid in entities:
+                entity_use.setdefault(eid, set()).add(str(inv_id))
+
+        ergebnisse: list[CheckErgebnis] = []
+        for eid, inv_ids in entity_use.items():
+            typen = {typ_by_id.get(iid) for iid in inv_ids}
+            if "wallbox" not in typen or "e-auto" not in typen:
+                continue
+            wb = sorted(name_by_id.get(i, i) for i in inv_ids
+                        if typ_by_id.get(i) == "wallbox")
+            ea = sorted(name_by_id.get(i, i) for i in inv_ids
+                        if typ_by_id.get(i) == "e-auto")
+            ergebnisse.append(CheckErgebnis(
+                kategorie=kat,
+                schwere=CheckSeverity.WARNING.value,
+                meldung="Gleicher Sensor an Wallbox und E-Auto zugeordnet",
+                details=(
+                    f"Die Entity „{eid}“ ist sowohl der Wallbox "
+                    f"({', '.join(wb)}) als auch dem E-Auto ({', '.join(ea)}) "
+                    "zugeordnet — beide messen denselben Ladestrom. In Monats-/"
+                    "Jahresauswertungen wird die Ladung dadurch doppelt gezählt "
+                    "(im Live-Energiefluss nicht). Bitte die Zuordnung an einer "
+                    "der beiden Investitionen entfernen — Faustregel: die Wallbox "
+                    "misst den Stromfluss, das E-Auto trägt Nutzung/Kilometer."
+                ),
+            ))
         return ergebnisse
