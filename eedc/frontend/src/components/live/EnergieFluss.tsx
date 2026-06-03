@@ -408,7 +408,7 @@ export default function EnergieFluss({
     `Aktuell: ${haushalt ? (haushalt.verbrauch_kw ?? 0).toFixed(2) : '—'} kW`,
     'Verbrauch ohne separat erfasste Geräte (z. B. Wallbox);',
     'enthält auch nicht einzeln gemessene Verbraucher',
-    `Gesamtverbrauch: ${summeVerbrauch.toFixed(2)} kW`,
+    `Verbrauchsseite (Bilanz): ${summeVerbrauch.toFixed(2)} kW`,
     `Quellen: ${summeErzeugung.toFixed(2)} kW`,
     ...(tagesWerte?.haushalt != null ? [`Heute: ${tagesWerte.haushalt.toFixed(1)} kWh`] : []),
   ].join('\n')
