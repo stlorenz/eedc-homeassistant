@@ -18,6 +18,14 @@
 - **Deine bestehenden Daten werden automatisch umgezogen.** Beim Update verschiebt eedc vorhandene Heimladungs-Werte einmalig vom E-Auto in den Wallbox-Slot (pro Monat gewinnt der höhere, vollständigere Wert). Fälle, die sich nicht eindeutig zusammenführen lassen, bleiben unverändert stehen und werden im **Daten-Checker** als Pflege-Hinweis angezeigt — dort kannst du in Ruhe entscheiden, welche Quelle stimmt. **Tipp:** Vor dem Update wie immer ein Backup der Daten anlegen.
 - **Auswertungen bleiben gleich aussehend.** E-Auto- und Wallbox-Dashboard zeigen die Ladequellen weiter wie gewohnt — die Zahlen stammen nur jetzt aus einer eindeutigen Quelle statt aus zwei konkurrierenden.
 
+### Außerdem in dieser Version
+
+- **Prognosen-Vergleich: der gemessene Ist-Ertrag startet wieder zur richtigen Stunde.** Im „Stundenvergleich heute" (Aussichten → Prognosen) lag die IST-Spalte bei HA-Add-on-Nutzern eine Stunde vor den Prognosen. Das ist behoben — alle Spalten liegen jetzt auf demselben Stundenraster. Tages- und Monatssummen waren nie betroffen; ältere Tage kannst du bei Bedarf über „Mehrere Tage neu aggregieren" nachziehen. Danke an rapahl.
+- **Speicher & Co. lassen sich wieder mit Dezimalwerten speichern.** Eine Kapazität wie 5,12 kWh wurde beim Bearbeiten still abgewiesen, „Speichern" tat dann nichts. Jetzt akzeptieren die Zahlenfelder beliebige Werte. Und im Einrichtungs-Assistenten erscheint beim Bezeichnungs-Feld keine kryptische Fehlermeldung mehr. Danke an Sabrina.
+- **Finanzen: „Netto-Ertrag" berücksichtigt jetzt auch Sonstige Erträge.** Bisher wurden nur Sonstige Ausgaben abgezogen, Sonstige Erträge aber nicht addiert. Danke an rilmor.
+- **Monatsbericht: abgeschlossene Monate zeigen die Einspeisung wieder korrekt.** Bei manchen Cloud-Anbindungen ohne eigene Einspeise-Messung stand fälschlich 0 — die bereits gespeicherten Werte werden nicht mehr überschrieben. Deine Daten waren korrekt, nur die Anzeige. Danke an detlefh68.
+- **Live-Energiefluss hebt die Solarleistung bei mehreren PV-Strings hervor.** Danke an kingcap1.
+
 ## v3.35.2 — Live-Energiefluss schärfer + kleine Tooltip-Verbesserungen (Juni 2026)
 
 ### Was sich für dich ändert
