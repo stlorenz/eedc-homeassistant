@@ -209,7 +209,9 @@ Vehicle-Sensor-Mapping (`ladung_heim_*`) + Multi-Fahrzeug-Aufschlüsselung — T
 2. Gibt es EEDC-Nutzer mit Multi-WB/Multi-E-Auto-Setup? (Joachim-xo prüfen)
 3. Braucht das Monatsabschluss-Formular ein geändertes Layout für die neuen Felder?
 
-## Bekannte Schwäche — `verbrauch_kwh` überladen (Folge aus Live-Check 2026-06-04)
+## Bekannte Schwächen — Phase-2a-Fehlalarme bei Wallbox+E-Auto (Live-Check 2026-06-04)
+
+### A) `verbrauch_kwh` überladen → False-Positive-Pflege-Konflikt
 
 **Symptom:** Bei einer Anlage mit Wallbox (= kanonische Quelle) **und** einem
 E-Auto, das sein Feld „Verbrauch (kWh)" (Fahrverbrauch, für kWh/100 km) pflegt,
@@ -235,3 +237,25 @@ Wallbox** als kanonische Quelle existiert (bzw. im Pflege-Check die Heimladung
 des E-Autos nur aus den expliziten `ladung_*`-Feldern bilden, nicht aus
 `verbrauch_kwh`). Risiko: echte Legacy-Daten ohne `ladung_*` dürfen nicht
 verloren gehen → sorgfältig abgrenzen. Post-Phase-2a, kein Release-Blocker.
+
+### B) Zähler-Abdeckungs-Check verlangt E-Auto-Zähler trotz Wallbox-Deckung
+
+**Symptom:** Räumt man (korrekt) alle Heimladungs-/Verbrauchs-Sensoren vom E-Auto
+(weil die Wallbox die kanonische Quelle ist), meldet der Daten-Checker
+»Energieprofil – Zähler-Abdeckung«: „Komponente ohne vollständige kWh-Zähler-
+Abdeckung … Smart #1 (e-auto): verbrauch_kwh oder ladung_kwh".
+
+**Ursache:** Der Abdeckungs-Check prüft jede Investition **einzeln** und weiß
+nicht, dass die Lade-Energie des E-Autos bereits über den **Wallbox-Zähler**
+(`ladung_kwh` → Energiefluss-Kategorie „ladung_wallbox") erfasst ist. Ein
+zusätzlicher E-Auto-Zähler würde dieselbe Energie **doppelt zählen**.
+
+**Wirkung:** Reiner Fehlalarm in der „Wallbox = Zähler, E-Auto = Fahrzeug"-
+Topologie. Die E-Auto-Linie im Tages-Energieprofil/Heatmap bleibt leer (Energie
+steckt korrekt in der Wallbox-Linie); Autarkie, Gesamtverbrauch und Monats-
+Auswertungen sind unberührt. **Nicht** auf »Beheben« klicken — das würde Doppel-
+zählung + Pflege-Konflikt zurückbringen.
+
+**Kandidat-Fix:** Der Zähler-Abdeckungs-Check soll den kWh-Zähler-Bedarf eines
+E-Autos **überspringen, wenn eine Wallbox mit kWh-Zähler** in derselben Anlage
+existiert (analog zur strukturellen Quellen-Regel). Gleiche Issue-Familie wie A.
