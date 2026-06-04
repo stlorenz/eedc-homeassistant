@@ -1,6 +1,6 @@
 # Was ist neu
 
-> **Stand:** Juni 2026 (v3.35.2)
+> **Stand:** Juni 2026 (v3.36.0)
 > **Diese Seite** zeigt pro Version, was sich für dich als Anwender geändert hat — kürzer als der technische [CHANGELOG](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md), ausführlicher als die Schnellübersicht-Tabelle in der [Übersicht](BENUTZERHANDBUCH.md#was-ist-neu-seit-v316).
 >
 > **Kein Banner, kein Pop-up:** eedc zeigt diese Liste nicht ungefragt an. HA-App-Nutzer sehen den Changelog ohnehin schon im Add-on-Store, GitHub-Releases haben einen eigenen. Wer wissen will, was neu ist, schaut hier rein — Pull statt Push.
@@ -8,6 +8,15 @@
 > **Lesehinweis:** Die jüngsten Versionen stehen oben. Jeder Punkt verlinkt entweder auf die zuständige Hilfe-Sektion oder direkt auf die App-Funktion (sofern erreichbar). Anker-URLs (`?doc=was-ist-neu`) sind teilbar.
 
 ---
+
+## v3.36.0 — Heimladung sauber an der Wallbox geführt (Juni 2026)
+
+### Was sich für dich ändert
+
+- **Wer eine Wallbox hat, pflegt die Ladestrom-Daten nur noch dort.** Bisher konnte dieselbe zu Hause geladene Energie an zwei Stellen liegen — an der Wallbox *und* am E-Auto. Das führte zu widersprüchlichen Zahlen (z. B. einem PV-Anteil über 100 % oder doppelt gezähltem Ladestrom). Ab sofort ist die Heimladung (gesamt / aus PV / aus Netz) eindeutig an der **Wallbox** zu Hause: Sie misst den Strom am Ladepunkt. Das **E-Auto** trägt nur noch, was wirklich zum Fahrzeug gehört — gefahrene km, Verbrauch, externe Ladung unterwegs und V2H. Im E-Auto-Eingabeformular blendet eedc die Heimladungs-Felder „Heim: PV"/„Heim: Netz" deshalb aus, sobald eine Wallbox vorhanden ist.
+- **Ohne Wallbox ändert sich nichts.** Wer per Steckerlader/Schuko lädt und keine Wallbox als Investition angelegt hat, erfasst die Heimladung weiterhin direkt am E-Auto.
+- **Deine bestehenden Daten werden automatisch umgezogen.** Beim Update verschiebt eedc vorhandene Heimladungs-Werte einmalig vom E-Auto in den Wallbox-Slot (pro Monat gewinnt der höhere, vollständigere Wert). Fälle, die sich nicht eindeutig zusammenführen lassen, bleiben unverändert stehen und werden im **Daten-Checker** als Pflege-Hinweis angezeigt — dort kannst du in Ruhe entscheiden, welche Quelle stimmt. **Tipp:** Vor dem Update wie immer ein Backup der Daten anlegen.
+- **Auswertungen bleiben gleich aussehend.** E-Auto- und Wallbox-Dashboard zeigen die Ladequellen weiter wie gewohnt — die Zahlen stammen nur jetzt aus einer eindeutigen Quelle statt aus zwei konkurrierenden.
 
 ## v3.35.2 — Live-Energiefluss schärfer + kleine Tooltip-Verbesserungen (Juni 2026)
 
