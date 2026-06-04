@@ -190,16 +190,26 @@ echo -e "  ${GREEN}Frontend Build erfolgreich${NC}"
 cd "$REPO_DIR"
 
 # =============================================================================
-# SCHRITT 3: CHANGELOG synchronisieren (Root → eedc/)
+# SCHRITT 3: CHANGELOG + README synchronisieren (Root → eedc/)
 # =============================================================================
 echo ""
-echo -e "${CYAN}[3/6] CHANGELOG synchronisieren...${NC}"
+echo -e "${CYAN}[3/6] CHANGELOG + README synchronisieren...${NC}"
 
 if [ -f "CHANGELOG.md" ]; then
     cp CHANGELOG.md eedc/CHANGELOG.md
     echo "  CHANGELOG.md → eedc/CHANGELOG.md"
 else
     echo -e "${YELLOW}  Kein Root-CHANGELOG.md gefunden, überspringe.${NC}"
+fi
+
+# Root-README ist die in HA (App-Info-Tab) gerenderte README → bei jedem Release angleichen.
+# Die Standalone-Variante mit LAN-Security-Hinweis liegt separat in eedc/README.standalone.md
+# und geht weiter unten in den Standalone-Mirror (siehe SCHRITT 5).
+if [ -f "README.md" ]; then
+    cp README.md eedc/README.md
+    echo "  README.md → eedc/README.md (HA-App-Info-Tab)"
+else
+    echo -e "${YELLOW}  Kein Root-README.md gefunden, überspringe.${NC}"
 fi
 
 # Konfliktmarker-Check
@@ -261,7 +271,9 @@ echo "  frontend/ → eedc/frontend/"
 
 # Einzeldateien die in beiden Repos existieren
 cp eedc/CHANGELOG.md "$EEDC_STANDALONE/CHANGELOG.md"
-cp eedc/README.md "$EEDC_STANDALONE/README.md"
+# Standalone-Mirror bekommt die Standalone-README MIT LAN-Security-Hinweis,
+# NICHT die HA-App-README (dort wäre der 8099-Auth-Hinweis falsch, da HA via Ingress läuft).
+cp eedc/README.standalone.md "$EEDC_STANDALONE/README.md"
 cp eedc/INSTALL.md "$EEDC_STANDALONE/INSTALL.md" 2>/dev/null || true
 cp eedc/.gitignore "$EEDC_STANDALONE/.gitignore" 2>/dev/null || true
 cp eedc/docker-compose.yml "$EEDC_STANDALONE/docker-compose.yml" 2>/dev/null || true

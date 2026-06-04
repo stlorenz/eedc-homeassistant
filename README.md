@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./docs/images/eedc-logo-full.png" alt="eedc Logo" width="400">
+  <img src="https://raw.githubusercontent.com/supernova1963/eedc-homeassistant/main/docs/images/eedc-logo-full.png" alt="eedc Logo" width="400">
 </p>
 
 <p align="center">
@@ -178,11 +178,11 @@ open http://localhost:3000
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [Benutzerhandbuch](docs/BENUTZERHANDBUCH.md) | Vollständige Anleitung für Endbenutzer |
-| [Infothek-Handbuch](docs/HANDBUCH_INFOTHEK.md) | Verträge, Zähler & Dokumente verwalten |
-| [Architektur](docs/ARCHITEKTUR.md) | Technische Dokumentation für Entwickler |
-| [Changelog](CHANGELOG.md) | Versionshistorie und Änderungen |
-| [Entwicklung](docs/DEVELOPMENT.md) | Setup für lokale Entwicklung |
+| [Benutzerhandbuch](https://github.com/supernova1963/eedc-homeassistant/blob/main/docs/BENUTZERHANDBUCH.md) | Vollständige Anleitung für Endbenutzer |
+| [Infothek-Handbuch](https://github.com/supernova1963/eedc-homeassistant/blob/main/docs/HANDBUCH_INFOTHEK.md) | Verträge, Zähler & Dokumente verwalten |
+| [Architektur](https://github.com/supernova1963/eedc-homeassistant/blob/main/docs/ARCHITEKTUR.md) | Technische Dokumentation für Entwickler |
+| [Changelog](https://github.com/supernova1963/eedc-homeassistant/blob/main/CHANGELOG.md) | Versionshistorie und Änderungen |
+| [Entwicklung](https://github.com/supernova1963/eedc-homeassistant/blob/main/docs/DEVELOPMENT.md) | Setup für lokale Entwicklung |
 
 ---
 
@@ -194,7 +194,7 @@ Die Hauptansicht zeigt alle wichtigen KPIs auf einen Blick:
 - Effizienz-Kennzahlen (Autarkie, Eigenverbrauchsquote)
 - Komponenten-Status (Speicher, E-Auto, Wärmepumpe)
 - Finanzielle Auswertung (Einsparungen, ROI)
-![Cockpit Übersicht](./docs/images/cockpit_main.png)
+![Cockpit Übersicht](https://raw.githubusercontent.com/supernova1963/eedc-homeassistant/main/docs/images/cockpit_main.png)
 
 ### Auswertungen
 Detaillierte Analysen in 7 Kategorien:
@@ -202,7 +202,7 @@ Detaillierte Analysen in 7 Kategorien:
 - PV-String-Performance nach Ausrichtung
 - Interaktiver Energie-Explorer (Tabellen-Tab)
 - Amortisationskurven für alle Investitionen
-![Auswertungen - Komponenten](./docs/images/auswertungen_komponenten.png)
+![Auswertungen - Komponenten](https://raw.githubusercontent.com/supernova1963/eedc-homeassistant/main/docs/images/auswertungen_komponenten.png)
 
 ---
 
@@ -265,13 +265,13 @@ Der **Monatsabschluss-Wizard** unterstützt dich bei der monatlichen Datenerfass
 
 ## Beitragen
 
-Beiträge sind willkommen! Bitte lies zuerst die [Entwickler-Dokumentation](docs/DEVELOPMENT.md).
+Beiträge sind willkommen! Bitte lies zuerst die [Entwickler-Dokumentation](https://github.com/supernova1963/eedc-homeassistant/blob/main/docs/DEVELOPMENT.md).
 
 ---
 
 ## Lizenz
 
-MIT License - siehe [LICENSE](LICENSE)
+MIT License - siehe [LICENSE](https://github.com/supernova1963/eedc-homeassistant/blob/main/LICENSE)
 
 ---
 
