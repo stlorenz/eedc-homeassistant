@@ -195,7 +195,7 @@ Die **datenabhängige** Laufzeit-Heuristik (`use_wb_pool` = „größere Heimlad
 
 ---
 
-**Phase 2a Etappen 1–5 alle ✅ erledigt (UNRELEASED, 2026-06-04).** Verbleibend nur noch: gemeinsames Release (Etappe 2+3+4 zwingend zusammen) mit DB-Backup-Hinweis in den Release-Notes + Live-Gegencheck via ha-mcp an Gernots Anlage.
+**Phase 2a Etappen 1–5 alle ✅ — RELEASED in v3.36.0 (2026-06-04).** Live-Gegencheck an Gernots Anlage erfolgreich: Migration sauber gelaufen (13 Monate Trias→Wallbox, 2 nur geräumt, 15 unauflösbar→Daten-Checker, keine Fehler im Add-on-Log). Der Daten-Checker zeigt korrekt den neuen Pflege-Konflikt-Text + per `_check_emob_sensor_doppelmapping` die Wurzel: derselbe `evcc_pv_charged`-Sensor war an Wallbox **und** E-Auto gemappt. Nach Sensor-Mapping-Korrektur (Heimladung nur an der Wallbox) sind künftige Monate sauber.
 
 ### Risiken
 DB-Backup-Hinweis vor der Migration; additiv + idempotent; Teil-Umstellung in Schritt 2 nur mit dem Symmetrie-Test absichern (sonst stille Drift); Steckerlader-/Manuell-Nutzer ohne Wallbox müssen unangetastet bleiben. Live-Gegencheck via ha-mcp an Gernots Anlage (hat den Pflege-Konflikt real).
@@ -208,3 +208,30 @@ Vehicle-Sensor-Mapping (`ladung_heim_*`) + Multi-Fahrzeug-Aufschlüsselung — T
 1. Liefern SMA eCharger und Wattpilot ähnliche Per-Vehicle-Topics wie evcc?
 2. Gibt es EEDC-Nutzer mit Multi-WB/Multi-E-Auto-Setup? (Joachim-xo prüfen)
 3. Braucht das Monatsabschluss-Formular ein geändertes Layout für die neuen Felder?
+
+## Bekannte Schwäche — `verbrauch_kwh` überladen (Folge aus Live-Check 2026-06-04)
+
+**Symptom:** Bei einer Anlage mit Wallbox (= kanonische Quelle) **und** einem
+E-Auto, das sein Feld „Verbrauch (kWh)" (Fahrverbrauch, für kWh/100 km) pflegt,
+feuert der Daten-Checker `_check_emob_pool_pflege` einen **falschen** Pflege-
+Konflikt — und der kanonische Helfer zählt das E-Auto als „Heimladung tragend".
+
+**Ursache:** `get_eauto_ladung_kwh(data)` = `ladung_kwh or verbrauch_kwh`. Der
+`verbrauch_kwh`-Zweig ist ein **Legacy-Fallback** für Alt-E-Auto-Daten, in denen
+die Heimladung historisch in `verbrauch_kwh` lag (vor den `ladung_pv/netz`-
+Feldern). Heute ist `verbrauch_kwh` am E-Auto aber der **Fahrverbrauch** — das
+Feld ist also doppelt belegt (Fahrverbrauch ∧ Legacy-Heimladung). Hat das E-Auto
+kein `ladung_kwh`, wird sein Fahrverbrauch als Heimladung gelesen.
+
+**Wirkung:** Anzeige bleibt korrekt (die Wallbox gewinnt strukturell), aber der
+Pflege-Konflikt-Hinweis ist ein False Positive. Anlass: Gernots Smart #1 —
+deshalb steht „Verbrauch" dort jetzt bewusst auf Manuell/leer (kWh/100 km
+entfällt). Real auch: evcc liefert für viele Fahrzeuge ohnehin keinen echten
+kumulativen Fahr-Verbrauchszähler (nur Lade-Energie + Momentan-Durchschnitt in W).
+
+**Kandidat-Fix (Variante offen → eher eigenes Issue, [[feedback_issue_vs_memory]]):**
+Den `verbrauch_kwh`→Heimladung-Fallback nur greifen lassen, wenn **keine
+Wallbox** als kanonische Quelle existiert (bzw. im Pflege-Check die Heimladung
+des E-Autos nur aus den expliziten `ladung_*`-Feldern bilden, nicht aus
+`verbrauch_kwh`). Risiko: echte Legacy-Daten ohne `ladung_*` dürfen nicht
+verloren gehen → sorgfältig abgrenzen. Post-Phase-2a, kein Release-Blocker.
