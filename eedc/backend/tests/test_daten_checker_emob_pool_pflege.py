@@ -129,7 +129,7 @@ async def test_kruemel_pflege_kein_eintrag(db):
     """WB dominant, EA mit Krümeln (< 10 kWh/Monat) → kein Konflikt.
 
     Das passiert typisch wenn evcc-Vehicle-Topics nur sporadisch gepflegt
-    werden — die Pool-Heuristik wählt klar Wallbox, kein Fehlalarm.
+    werden — die Wallbox ist klar die Quelle, kein Fehlalarm.
     """
     anlage = await _seed_anlage(db)
     wb = await _add_inv(db, anlage.id, "wallbox")
@@ -181,7 +181,7 @@ async def test_drei_doppelmonate_konsistent_info(db):
     e = ergebnisse[0]
     assert e.kategorie == CheckKategorie.EMOB_POOL_PFLEGE.value
     assert e.schwere == CheckSeverity.INFO.value
-    assert "parallel" in e.meldung.lower()
+    assert "wallbox ist die quelle" in e.meldung.lower()
 
 
 async def test_pv_inkonsistenz_warning(db):

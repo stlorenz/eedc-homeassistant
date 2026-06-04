@@ -2417,11 +2417,12 @@ class DatenChecker:
                     f"PV-Anteil bei EA={ea_pv:.0f} kWh, WB={wb_pv:.0f} kWh "
                     f"— Abweichung > {int(self.EMOB_POOL_PV_INKONSISTENZ*100)} %, "
                     "obwohl beide Sichten denselben Stromfluss messen "
-                    "sollten. eedc poolt aktuell heuristisch (Quelle mit "
-                    "der größeren Heimladung gewinnt) — bei Streudaten auf "
-                    "der falschen Quelle wählt die Heuristik still falsch. "
-                    "Empfehlung: entscheide bewusst, welche Quelle die "
-                    "Wahrheit liefert, und lasse die andere leer."
+                    "sollten. eedc führt die Heimladung kanonisch an der "
+                    "Wallbox (sie misst den Ladepunkt); der parallel am "
+                    "E-Auto gepflegte Wert wird in den Auswertungen ignoriert. "
+                    "Damit dein PV-Anteil stimmt: pflege die Heimladung nur an "
+                    "der Wallbox und lasse die E-Auto-Heimladung leer "
+                    "(km, Verbrauch, Extern und V2H bleiben am E-Auto)."
                 ),
             ))
         else:
@@ -2429,8 +2430,8 @@ class DatenChecker:
                 kategorie=kat,
                 schwere=CheckSeverity.INFO.value,
                 meldung=(
-                    "E-Auto- und Wallbox-Investition werden parallel "
-                    "gepflegt — Pool-Heuristik aktiv"
+                    "E-Auto- und Wallbox-Investition tragen beide Heimladung "
+                    "— die Wallbox ist die Quelle"
                 ),
                 details=(
                     f"In {len(doppel_monate)} Monaten der letzten "
@@ -2438,9 +2439,11 @@ class DatenChecker:
                     "mit Heimladung gepflegt (Beispiele: "
                     f"{beispiel_monate}). Wallbox- und E-Auto-Investition "
                     "messen oft denselben Stromfluss aus zwei Perspektiven; "
-                    "eedc nutzt für die Aggregation die Quelle mit der "
-                    "größeren Heimladung (Pool-Helper). Sauberer ist nur "
-                    "eine Quelle zu pflegen — die andere bleibt leer."
+                    "eedc führt die Heimladung kanonisch an der Wallbox, die "
+                    "parallel am E-Auto gepflegte Heimladung wird in den "
+                    "Auswertungen nicht verwendet. Sauberer ist, nur die "
+                    "Wallbox zu pflegen und die E-Auto-Heimladung leer zu "
+                    "lassen (km/Verbrauch/Extern/V2H bleiben am E-Auto)."
                 ),
             ))
 
