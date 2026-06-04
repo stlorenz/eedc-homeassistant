@@ -157,7 +157,7 @@ async def get_komponenten_zeitreihe(
             "wp_waerme": 0, "wp_strom": 0, "wp_heizung": 0, "wp_warmwasser": 0,
             "wp_strom_heizen": 0, "wp_strom_warmwasser": 0,
             # E-Mobilität: rohe IMD-`verbrauch_daten` je Quelle sammeln, erst
-            # beim Konsolidieren unten via `aggregiere_emob_ladung` zu EINER
+            # beim Konsolidieren unten via `get_emob_heimladung_canonical` zu EINER
             # konsistenten Trias poolen. Wallbox-IMD und E-Auto-IMD messen oft
             # denselben Stromfluss aus zwei Perspektiven → feldweises max()
             # über pv/netz konnte sie mischen (#262 junky84: PV-Anteil > 100 %).
@@ -229,7 +229,7 @@ async def get_komponenten_zeitreihe(
             if ist_dienstlich(inv):
                 continue
             # Rohe IMD je Quelle sammeln — Pooling zentral via
-            # `aggregiere_emob_ladung` weiter unten. km + v2h nur vom E-Auto.
+            # `get_emob_heimladung_canonical` weiter unten. km + v2h nur vom E-Auto.
             if inv.typ == "e-auto":
                 d["eauto_imds"].append(data)
                 d["eauto_km"] += data.get("km_gefahren", 0) or 0

@@ -195,7 +195,7 @@ async def get_cockpit_uebersicht(
     wp_heizung = 0.0
     wp_warmwasser = 0.0
     # E-Mobilität: rohe IMD je Quelle (E-Auto / Wallbox) sammeln, danach
-    # zentral via `aggregiere_emob_ladung` zu EINER konsistenten Heimladungs-
+    # zentral via `get_emob_heimladung_canonical` zu EINER konsistenten Heimladungs-
     # Trias poolen. E-Auto- und Wallbox-IMD messen oft denselben Stromfluss
     # aus zwei Perspektiven — der Helper wählt die Quelle mit der größeren
     # Heimladung komplett (gleiche Logik wie Wallbox-Dashboard, Komponenten,

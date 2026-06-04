@@ -1,10 +1,9 @@
 """Phase 2a: kanonische E-Mob-Heimladungs-Quelle (strukturelle Regel).
 
 Anlass: `docs/KONZEPT-WALLBOX-EAUTO.md` Abschnitt »Phase 2a — Umsetzungsplan«,
-Etappe 1. Der bestehende `aggregiere_emob_ladung`-Pool wählt die Quelle per
-Magnitudenvergleich (`wb.ladung_kwh >= ea.ladung_kwh`) — das kippt bei
-verirrten Streudaten auf der E-Auto-IMD (#262 junky84). Der neue Helfer
-`get_emob_heimladung_canonical` ersetzt das durch eine **strukturelle** Regel:
+Etappe 1. Eine Magnituden-Heuristik (`wb.ladung_kwh >= ea.ladung_kwh`) kippt
+bei verirrten Streudaten auf der E-Auto-IMD (#262 junky84). Der Helfer
+`get_emob_heimladung_canonical` wählt stattdessen **strukturell**:
 Wallbox vorhanden + hat Heimladung → Wallbox ist Quelle; sonst E-Auto.
 
 Geprüft:
@@ -40,9 +39,10 @@ def test_evcc_setup_wallbox_ist_quelle():
 
 
 def test_eauto_streudaten_groesser_wallbox_gewinnt_trotzdem():
-    """KERN-FIX gegenüber Magnitude: E-Auto-IMD trägt GRÖSSERE (verirrte)
+    """KERN der strukturellen Regel: E-Auto-IMD trägt GRÖSSERE (verirrte)
     Heimladung als die Wallbox — die strukturelle Regel wählt dennoch die
-    Wallbox. `aggregiere_emob_ladung` (Magnitude) würde hier das E-Auto wählen.
+    Wallbox. Eine Magnituden-Heuristik hätte hier das E-Auto gewählt (und damit
+    die Streudaten als Wahrheit genommen).
     """
     pool = get_emob_heimladung_canonical(
         eauto_imd_data=[{
@@ -57,19 +57,6 @@ def test_eauto_streudaten_groesser_wallbox_gewinnt_trotzdem():
     assert pool.ladung_kwh == 500
     assert pool.pv_kwh == 200
     assert pool.netz_kwh == 300
-
-    # Gegenprobe: der alte Magnituden-Pool hätte hier das E-Auto gewählt.
-    from backend.services.eauto_wirtschaftlichkeit import aggregiere_emob_ladung
-    alt = aggregiere_emob_ladung(
-        eauto_imd_data=[{
-            "ladung_kwh": 3300, "ladung_pv_kwh": 1000, "ladung_netz_kwh": 2300,
-            "km_gefahren": 1000,
-        }],
-        wallbox_imd_data=[{
-            "ladung_kwh": 500, "ladung_pv_kwh": 200, "ladung_netz_kwh": 300,
-        }],
-    )
-    assert alt.quelle == "e-auto"  # dokumentiert die Divergenz, die 2a behebt
 
 
 def test_steckerlader_keine_wallbox_eauto_ist_quelle():

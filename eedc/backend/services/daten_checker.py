@@ -80,13 +80,13 @@ class CheckKategorie(str, Enum):
     PV_UEBER_ERFASSUNG = "pv_ueber_erfassung"
     # Wallbox/E-Auto Phase 2a aus KONZEPT-WALLBOX-EAUTO.md: wenn EAuto-
     # Investition UND Wallbox-Investition beide Heimladungs-Werte tragen,
-    # messen sie häufig denselben Stromfluss aus zwei Perspektiven. Der
-    # Pool-Helper `aggregiere_emob_ladung` (v3.31.6) ist eine Heuristik
-    # (Quelle mit der größeren Heimladung gewinnt komplett); bei verirrten
-    # Streudaten auf der falschen Quelle (junky84 #262: ~3.300 kWh auf der
-    # E-Auto-Investition) kann sie still falsch wählen. Diagnose-Eintrag
-    # lenkt den Anwender auf eine bewusste Entscheidung: nur eine Quelle
-    # pflegen.
+    # messen sie häufig denselben Stromfluss aus zwei Perspektiven. Die
+    # Read-Sites wählen die Quelle strukturell (Wallbox vorhanden → Wallbox),
+    # die einmalige Migration konsolidiert Bestände in den Wallbox-Slot. Was
+    # die Migration NICHT verlustfrei auflösen kann (Total auf der einen,
+    # PV-Split nur auf der anderen Seite) bleibt stehen — dieser Diagnose-
+    # Eintrag lenkt den Anwender dann auf eine bewusste Entscheidung: nur eine
+    # Quelle pflegen.
     EMOB_POOL_PFLEGE = "emob_pool_pflege"
 
 
@@ -2293,13 +2293,14 @@ class DatenChecker:
         return ergebnisse
 
     def _check_emob_pool_pflege(self, anlage: Anlage) -> list[CheckErgebnis]:
-        """E-Auto- + Wallbox-Investition parallel gepflegt → Pool-Heuristik wirkt.
+        """E-Auto- + Wallbox-Investition parallel gepflegt → Pflege-Konflikt.
 
         Wallbox (Loadpoint-Sicht) und E-Auto (Vehicle-Sicht) messen häufig
-        denselben Stromfluss aus zwei Perspektiven. Heute löst der Pool-
-        Helper `aggregiere_emob_ladung` (v3.31.6) den Konflikt heuristisch
-        (Quelle mit der größeren Heimladung gewinnt komplett). Bei verirrten
-        Streudaten auf der falschen Quelle wählt die Heuristik still falsch.
+        denselben Stromfluss aus zwei Perspektiven. Seit Phase 2a wählen die
+        Read-Sites die Quelle strukturell (Wallbox vorhanden → Wallbox) und die
+        Migration konsolidiert Bestände in den Wallbox-Slot. Was die Migration
+        nicht verlustfrei auflösen kann (z. B. Total auf der einen, PV-Split nur
+        auf der anderen Seite) bleibt als Doppel-Pflege stehen.
 
         Diese Diagnose erkennt das Pflege-Muster („beide Quellen über mehrere
         Monate hinweg nennenswert befüllt") und lenkt den Anwender auf eine

@@ -1,10 +1,10 @@
 """Daten-Checker: evcc-Pool-Pflege-Mismatch-Warnung (Wallbox/EAuto-Konzept Phase 2a).
 
 Trigger: junky84 #262 hatte ~3.300 kWh Streudaten auf der E-Auto-Investition
-zusätzlich zur korrekten Wallbox-Pflege. Der Pool-Helper
-`aggregiere_emob_ladung` wählt heuristisch die Quelle mit der größeren
-Heimladung als Gewinner — bei Streudaten auf der falschen Seite kann das
-still falsch sein. Diese Diagnose erkennt das Pflege-Muster und lenkt
+zusätzlich zur korrekten Wallbox-Pflege. Seit Phase 2a wählen die Read-Sites
+die Quelle strukturell (`get_emob_heimladung_canonical`) und die Migration
+konsolidiert in den Wallbox-Slot; was nicht verlustfrei auflösbar ist, bleibt
+als Doppel-Pflege stehen. Diese Diagnose erkennt das Pflege-Muster und lenkt
 den Anwender auf eine bewusste Entscheidung.
 
 Tests sichern:

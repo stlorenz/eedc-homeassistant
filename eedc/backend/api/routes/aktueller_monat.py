@@ -345,7 +345,7 @@ async def _collect_saved_data(
         wp_strom_total = 0.0
         wp_waerme_total = 0.0
         # E-Mobilität: rohe IMD je Quelle (E-Auto / Wallbox) sammeln, danach
-        # zentral via `aggregiere_emob_ladung` zu EINER konsistenten Heim-
+        # zentral via `get_emob_heimladung_canonical` zu EINER konsistenten Heim-
         # ladungs-Trias poolen. Beide Investitionstypen messen denselben
         # Stromfluss aus zwei Perspektiven (siehe docs/KONZEPT-WALLBOX-EAUTO.md)
         # — der Helper wählt die Quelle mit der größeren Heimladung komplett,
