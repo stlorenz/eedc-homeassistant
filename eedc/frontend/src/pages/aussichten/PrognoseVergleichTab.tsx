@@ -305,10 +305,9 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
   const hMax = helleStunden.length > 0 ? Math.min(23, helleStunden[helleStunden.length - 1] + 1) : 23
   const visibleChartData = chartData.slice(hMin, hMax + 1)
 
-  // ── 7-Tage-Daten (rapahl-PN 2026-05-19): 4 Tage Vergangenheit + 3 Tage Zukunft. ──
-  // Heute steht oben in der KPI-Matrix und wird hier ausgelassen. Historische
-  // Tage ohne Wetter-Icon/Temp/Solcast-Band — diese Forecast-Felder ergeben
-  // im Rückblick keinen Sinn, IST und Tages-Vorhersagewerte reichen.
+  // ── 7-Tage-Daten (rapahl-PN 2026-05-19): 4 Tage Vergangenheit + Heute + 3 Tage Zukunft. ──
+  // Wettersymbol/Temp jetzt auch für Vergangenheitstage (#296 #2, aus dem
+  // Stundenprofil aggregiert) und Heute-Zeile aus IST-bisher + Restprognose (#1).
   const heute = new Date().toISOString().slice(0, 10)
   const historisch = (genauigkeit?.tage ?? [])
     .filter(t => t.datum < heute)
@@ -320,10 +319,27 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
       sc_kwh: t.solcast_kwh,
       sc_p10: null as number | null,
       sc_p90: null as number | null,
-      wetter_symbol: null as string | null,
-      temp_max: null as number | null,
+      wetter_symbol: t.wetter_symbol ?? null,
+      temp_max: t.temperatur_max_c ?? null,
       ist_kwh: t.ist_kwh,
+      ist_partiell: false,
     }))
+  // #1: Heute-Zeile — Tages-Forecasts je Quelle, IST = bisher aufgelaufener Ertrag
+  // (als partiell markiert, weil der Tag noch läuft). Wetter aus dem heutigen
+  // OpenMeteo-Tag.
+  const omHeute = data.openmeteo_tage.find(om => om.datum === heute)
+  const heuteZeile = {
+    datum: heute,
+    om_kwh: data.openmeteo_heute_kwh,
+    eedc_kwh: hasEedc ? data.eedc_heute_kwh : null,
+    sc_kwh: data.solcast_heute_kwh,
+    sc_p10: data.solcast_p10_kwh ?? null,
+    sc_p90: data.solcast_p90_kwh ?? null,
+    wetter_symbol: (omHeute?.wetter_symbol ?? null) as string | null,
+    temp_max: (omHeute?.temperatur_max_c ?? null) as number | null,
+    ist_kwh: data.ist_heute_kwh,
+    ist_partiell: true,
+  }
   const zukunft = data.openmeteo_tage
     .filter(om => om.datum > heute)
     .slice(0, 3)
@@ -339,9 +355,10 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
         wetter_symbol: om.wetter_symbol as string | null,
         temp_max: om.temperatur_max_c as number | null,
         ist_kwh: null as number | null,
+        ist_partiell: false,
       }
     })
-  const vergleichsTage = [...historisch, ...zukunft]
+  const vergleichsTage = [...historisch, heuteZeile, ...zukunft]
 
   return (
     <div className="space-y-6">
@@ -793,8 +810,11 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
                 const ref = tag.ist_kwh
                 const prognosen = [tag.om_kwh, tag.eedc_kwh, tag.sc_kwh].filter((v): v is number => v !== null)
                 const mean = prognosen.length > 1 ? prognosen.reduce((a, b) => a + b, 0) / prognosen.length : null
-                const devRef = ref ?? mean
-                // Trennlinie zwischen letzter Vergangenheits- und erster Zukunfts-Zeile.
+                // Heute: IST ist nur bisher aufgelaufen (Tag läuft) — nicht als
+                // Abweichungs-Referenz für Tages-Forecasts nutzen (#296 #1), sonst
+                // mean. Vergangenheit: IST; Zukunft: mean.
+                const devRef = tag.ist_partiell ? mean : (ref ?? mean)
+                // Trennlinie zwischen Heute/Vergangenheit und erster Zukunfts-Zeile.
                 const isFirstFuture = idx > 0 && vergleichsTage[idx - 1].ist_kwh !== null && tag.ist_kwh === null
                 return (
                   <tr
@@ -830,13 +850,20 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
                           <>
                             <span className="font-semibold">{tag.sc_kwh.toFixed(1)}</span>
                             {devRef !== null && <DevBadge prognose={tag.sc_kwh} ist={devRef} />}
-                            <span className="text-gray-400 text-xs ml-1">({tag.sc_p10?.toFixed(0)}–{tag.sc_p90?.toFixed(0)})</span>
+                            {tag.sc_p10 !== null && tag.sc_p90 !== null && (
+                              <span className="text-gray-400 text-xs ml-1">({tag.sc_p10.toFixed(0)}–{tag.sc_p90.toFixed(0)})</span>
+                            )}
                           </>
                         ) : '—'}
                       </td>
                     )}
                     <td className="py-2 pl-2 pr-3 text-right font-mono font-semibold text-green-600 dark:text-green-400">
-                      {tag.ist_kwh !== null ? tag.ist_kwh.toFixed(1) : <span className="text-gray-400 text-xs">⌀{mean?.toFixed(0)}</span>}
+                      {tag.ist_kwh !== null ? (
+                        <>
+                          {tag.ist_kwh.toFixed(1)}
+                          {tag.ist_partiell && <span className="text-gray-400 text-[10px] font-normal ml-1">bisher</span>}
+                        </>
+                      ) : <span className="text-gray-400 text-xs">⌀{mean?.toFixed(0)}</span>}
                     </td>
                   </tr>
                 )

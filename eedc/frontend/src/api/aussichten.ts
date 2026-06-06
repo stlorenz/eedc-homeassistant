@@ -328,6 +328,9 @@ export interface GenauigkeitsEintrag {
   eedc_kwh: number | null
   solcast_kwh: number | null
   ist_kwh: number | null
+  // Repräsentatives Tages-Wettersymbol (aus Stundenprofil aggregiert, #296 #2)
+  wetter_symbol?: string | null
+  temperatur_max_c?: number | null
 }
 
 export interface AsymmetrieEintrag {

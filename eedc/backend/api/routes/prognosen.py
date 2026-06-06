@@ -168,6 +168,9 @@ class GenauigkeitsEintrag(BaseModel):
     eedc_kwh: Optional[float] = None
     solcast_kwh: Optional[float] = None
     ist_kwh: Optional[float] = None
+    # Repräsentatives Tages-Wettersymbol (aus Stundenprofil aggregiert, #296 #2)
+    wetter_symbol: Optional[str] = None
+    temperatur_max_c: Optional[float] = None
 
 
 class AsymmetrieEintrag(BaseModel):
@@ -746,6 +749,37 @@ async def get_prognosen_genauigkeit(
     )
     tage_daten = result.scalars().all()
 
+    # ── Repräsentatives Tages-Wettersymbol je Tag (#296 #2) ──
+    # TagesZusammenfassung trägt keinen WMO-Code; er liegt nur stündlich im
+    # TagesEnergieProfil. Pro Tag: mittlere Bewölkung + Tagessumme Niederschlag +
+    # Code der Mittagsstunde → SoT-Helper wetter_symbol_aus_tag (gleiche Symbole
+    # wie der Forecast-Pfad, damit Rück- und Vorausschau konsistent aussehen).
+    tep_result = await db.execute(
+        select(TagesEnergieProfil).where(
+            TagesEnergieProfil.anlage_id == anlage_id,
+            TagesEnergieProfil.datum >= von,
+            TagesEnergieProfil.datum < date.today(),
+        )
+    )
+    _bew: dict = {}
+    _nieder: dict = {}
+    _codes: dict = {}
+    for row in tep_result.scalars().all():
+        if row.bewoelkung_prozent is not None:
+            _bew.setdefault(row.datum, []).append(row.bewoelkung_prozent)
+        if row.niederschlag_mm is not None:
+            _nieder[row.datum] = _nieder.get(row.datum, 0.0) + row.niederschlag_mm
+        if row.wetter_code is not None:
+            _codes.setdefault(row.datum, []).append((row.stunde, row.wetter_code))
+    wetter_pro_tag: dict = {}
+    for d in set(_bew) | set(_nieder) | set(_codes):
+        codes = _codes.get(d)
+        # Code der Stunde, die am nächsten an der Mittagsstunde (13 Uhr) liegt.
+        mittag_code = min(codes, key=lambda c: abs(c[0] - 13))[1] if codes else None
+        bews = _bew.get(d)
+        bew = sum(bews) / len(bews) if bews else None
+        wetter_pro_tag[d] = wetter_symbol_aus_tag(mittag_code, bew, _nieder.get(d))
+
     # Lernfaktor für EEDC-Genauigkeit (immer OpenMeteo-basiert)
     lernfaktor = await _get_lernfaktor(anlage_id, db, quelle="openmeteo")
 
@@ -774,6 +808,8 @@ async def get_prognosen_genauigkeit(
             eedc_kwh=round(eedc_kwh, 1) if eedc_kwh is not None else None,
             solcast_kwh=round(tz.solcast_prognose_kwh, 1) if tz.solcast_prognose_kwh is not None else None,
             ist_kwh=round(ist_kwh, 1) if ist_kwh is not None else None,
+            wetter_symbol=wetter_pro_tag.get(tz.datum),
+            temperatur_max_c=round(tz.temperatur_max_c) if tz.temperatur_max_c is not None else None,
         ))
 
         if ist_kwh is not None and ist_kwh > 0.5:
