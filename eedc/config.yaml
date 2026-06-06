@@ -36,7 +36,7 @@ panel_title: "eedc"
 # Benutzer-Optionen
 options:
   log_level: info
-  pdf_engine: reportlab
+  pdf_engine: weasyprint
   ha_recorder_db_url: ""
   live_snapshot_5min_enabled: false
   mqtt:
