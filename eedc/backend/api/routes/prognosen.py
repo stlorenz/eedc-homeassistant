@@ -38,8 +38,12 @@ from backend.services.prognose_adapter import (
     StundenProfil,
     ist_profil,
     openmeteo_gti_profil,
+    sfml_profil,
+    sfml_stundenprofil_aus_hours,
+    sfml_stundenprofile_aus_forecast,
     solcast_profil,
 )
+from backend.services.prognose_router import resolve_prognose_quelle
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +129,15 @@ class PrognosenVergleichResponse(BaseModel):
     solcast_stundenprofil: List[StundenProfilEintrag] = []
     solcast_tage: List[SolcastTagSchema] = []
     solcast_tageshaelften: List[Optional[TageshaelfteSchema]] = []
+
+    # SFML / Tom-HA (nur HA-Add-on, wenn als Quelle gewählt) — echtes
+    # mehrtägiges Stundenprofil, KEIN Cross-Quellen-Ranking (#110 „A").
+    sfml_verfuegbar: bool = False
+    sfml_heute_kwh: Optional[float] = None
+    sfml_morgen_kwh: Optional[float] = None
+    sfml_uebermorgen_kwh: Optional[float] = None
+    sfml_stundenprofil: List[StundenProfilEintrag] = []
+    sfml_tageshaelften: List[Optional[TageshaelfteSchema]] = []
 
     # IST-Ertrag heute (aus TagesEnergieProfil)
     ist_heute_kwh: Optional[float] = None
@@ -459,6 +472,47 @@ async def get_prognosen_vergleich(
         eedc_morgen_kwh = round(openmeteo_morgen_kwh * lernfaktor, 1) if openmeteo_morgen_kwh is not None else None
         eedc_uebermorgen_kwh = round(openmeteo_uebermorgen_kwh * lernfaktor, 1) if openmeteo_uebermorgen_kwh is not None else None
 
+    # ── SFML / Tom-HA: echtes mehrtägiges Stundenprofil (wenn als Quelle gewählt) ──
+    # Einzelquellen-Treue (#110 „A"): bei gewählter SFML-Quelle SFMLs eigene
+    # Kurvenform (evcc `forecast`, 3 Tage stündlich) statt GTI-Schmier. Nur
+    # HA-Add-on; KEIN Cross-Quellen-Genauigkeits-Ranking.
+    pq = resolve_prognose_quelle(anlage)
+    sfml_tagesprofile: list[list[float]] = [[], [], []]  # kWh-Slots je Tag (Backward)
+    sfml_heute_kwh = None
+    sfml_morgen_kwh = None
+    sfml_uebermorgen_kwh = None
+    if pq.ist_sfml:
+        try:
+            from backend.services.prognose_discovery import discover_prognose_sensoren
+            sfml_disc = await discover_prognose_sensoren("sfml")
+            if sfml_disc.gefunden:
+                sfml_heute_kwh = sfml_disc.wert("heute_kwh")
+                sfml_morgen_kwh = sfml_disc.wert("morgen_kwh")
+                sfml_uebermorgen_kwh = sfml_disc.wert("uebermorgen_kwh")
+                forecast_attr = sfml_disc.attribut("stundenprofil")
+                if forecast_attr:
+                    sfml_tagesprofile = sfml_stundenprofile_aus_forecast(forecast_attr, heute)
+                else:
+                    hours_attr = sfml_disc.attribut("heute_kwh")
+                    if hours_attr:
+                        sfml_tagesprofile = [sfml_stundenprofil_aus_hours(hours_attr), [], []]
+        except Exception as e:
+            logger.debug(f"SFML-Discovery (Prognosen-Tab) fehlgeschlagen: {e}")
+    sfml_verfuegbar = bool(sfml_tagesprofile and sfml_tagesprofile[0] and any(sfml_tagesprofile[0]))
+    # Tagessummen aus dem Profil ableiten, wenn die State-Skalare fehlen.
+    if sfml_verfuegbar and sfml_heute_kwh is None:
+        sfml_heute_kwh = round(sum(sfml_tagesprofile[0]), 1)
+    if sfml_morgen_kwh is None and len(sfml_tagesprofile) > 1 and any(sfml_tagesprofile[1] or []):
+        sfml_morgen_kwh = round(sum(sfml_tagesprofile[1]), 1)
+    if sfml_uebermorgen_kwh is None and len(sfml_tagesprofile) > 2 and any(sfml_tagesprofile[2] or []):
+        sfml_uebermorgen_kwh = round(sum(sfml_tagesprofile[2]), 1)
+    sfml_tagesprofile_eintraege = [
+        _profil_zu_eintraegen(sfml_profil(tag, datum=heute + timedelta(days=i)))
+        if (tag and any(tag)) else []
+        for i, tag in enumerate(sfml_tagesprofile)
+    ]
+    sfml_stundenprofil = sfml_tagesprofile_eintraege[0] if sfml_tagesprofile_eintraege else []
+
     # ── IST-Ertrag heute (zentraler Adapter) ──
     # Issue #135: pv_kw kann None sein (kein Zähler gemappt / Datenlücke). None-
     # Stunden fließen NICHT in die Summe ein und bleiben im Profil als Lücke
@@ -479,7 +533,11 @@ async def get_prognosen_vergleich(
     if ist_heute_kwh > 0 or openmeteo_stundenprofil:
         rest_prognose = 0.0
         for h in range(aktuelle_stunde + 1, 24):
-            if solcast and h < len(solcast.hourly_kw):
+            # Bei gewählter SFML-Quelle SFMLs eigene Reststunden konsumieren,
+            # sonst Solcast→OpenMeteo wie bisher (#110 „A").
+            if pq.ist_sfml and sfml_verfuegbar and h < len(sfml_tagesprofile[0]):
+                rest_prognose += sfml_tagesprofile[0][h]
+            elif solcast and h < len(solcast.hourly_kw):
                 rest_prognose += solcast.hourly_kw[h]
             elif h < len(openmeteo_stundenprofil):
                 rest_prognose += openmeteo_stundenprofil[h].kw
@@ -527,6 +585,13 @@ async def get_prognosen_vergleich(
         _berechne_tageshaelfte(p, solar_noons[i]) if p else None
         for i, p in enumerate(eedc_tagesprofile)
     ]
+    # SFML VM/NM pro Tag direkt aus dem echten Stundenprofil (kein Schätzen nötig)
+    sfml_ths: list[Optional[TageshaelfteSchema]] = [
+        _berechne_tageshaelfte(p, solar_noons[i]) if p else None
+        for i, p in enumerate(sfml_tagesprofile_eintraege[:3])
+    ]
+    while len(sfml_ths) < 3:
+        sfml_ths.append(None)
 
     # Solcast VM/NM pro Tag aus tage_voraus berechnen (Stundenwerte nur für heute vorhanden,
     # für Morgen/Übermorgen approximieren wir aus den 30-Min-Daten im SolcastForecast)
@@ -585,6 +650,12 @@ async def get_prognosen_vergleich(
         solcast_stundenprofil=solcast_stundenprofil,
         solcast_tage=solcast_tage,
         solcast_tageshaelften=sc_ths,
+        sfml_verfuegbar=sfml_verfuegbar,
+        sfml_heute_kwh=sfml_heute_kwh,
+        sfml_morgen_kwh=sfml_morgen_kwh,
+        sfml_uebermorgen_kwh=sfml_uebermorgen_kwh,
+        sfml_stundenprofil=sfml_stundenprofil,
+        sfml_tageshaelften=sfml_ths,
         ist_heute_kwh=round(ist_heute_kwh, 1) if ist_heute_kwh > 0 else None,
         ist_stundenprofil=ist_stundenprofil,
         ist_tageshaelfte=ist_th,

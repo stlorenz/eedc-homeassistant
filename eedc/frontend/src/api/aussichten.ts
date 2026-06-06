@@ -290,6 +290,15 @@ export interface PrognosenVergleich {
   solcast_tage: SolcastTag[]
   solcast_tageshaelften: (Tageshaelfte | null)[]
 
+  // SFML / Tom-HA (nur HA-Add-on, wenn als Quelle gewählt) — echtes
+  // mehrtägiges Stundenprofil, KEIN Cross-Quellen-Ranking (#110 „A")
+  sfml_verfuegbar?: boolean
+  sfml_heute_kwh?: number | null
+  sfml_morgen_kwh?: number | null
+  sfml_uebermorgen_kwh?: number | null
+  sfml_stundenprofil?: StundenProfilEintrag[]
+  sfml_tageshaelften?: (Tageshaelfte | null)[]
+
   // IST-Ertrag heute
   ist_heute_kwh: number | null
   ist_stundenprofil: StundenProfilEintrag[]

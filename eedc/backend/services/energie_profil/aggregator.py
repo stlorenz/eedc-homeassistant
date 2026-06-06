@@ -49,6 +49,7 @@ _PROGNOSE_FELDER_RETTEN: tuple[str, ...] = (
     "solcast_p90_kwh",
     "pv_prognose_stundenprofil",
     "solcast_prognose_stundenprofil",
+    "sfml_prognose_stundenprofil",
 )
 
 

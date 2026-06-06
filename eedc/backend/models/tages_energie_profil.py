@@ -170,6 +170,9 @@ class TagesZusammenfassung(Base):
     # Stundenprofil-Diagnostik (siehe docs/KONZEPT-KORREKTURPROFIL.md).
     pv_prognose_stundenprofil: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     solcast_prognose_stundenprofil: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    # SFML/Tom-HA echtes Stundenprofil (24 kWh-Slots, Backward) — bei gewählter
+    # SFML-Quelle SFMLs eigene Kurvenform statt GTI-Schmier (Tracking #110 „A").
+    sfml_prognose_stundenprofil: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
     # Anzahl verfügbarer Stundenwerte (Qualitätsindikator)
     stunden_verfuegbar: Mapped[int] = mapped_column(Integer, default=0)
