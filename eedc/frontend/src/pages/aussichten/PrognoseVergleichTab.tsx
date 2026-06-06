@@ -399,7 +399,7 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
               {/* Verbleibend */}
               <tr className="border-b border-gray-100 dark:border-gray-800">
                 <td className="py-2 px-3 text-gray-500 dark:text-gray-400 text-xs">
-                  <SimpleTooltip text="IST bisherig + beste Prognose für verbleibende Stunden (Solcast bevorzugt, sonst eedc/OpenMeteo)">
+                  <SimpleTooltip text="Tagesprojektion: IST bisher + Prognose für die restlichen Stunden. Pro Spalte mit der jeweiligen Quelle; Gesamtspalte mit der in den Einstellungen gewählten Prognosequelle.">
                     <span>↳ Verbleibend</span>
                   </SimpleTooltip>
                 </td>
