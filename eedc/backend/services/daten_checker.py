@@ -180,6 +180,11 @@ PV_MAX_KWH_PRO_KWP = {
 from backend.core.berechnungen import (
     PV_KOMPONENTEN_PREFIXE,
     summe_pv_bkw_kwh as _summe_pv_bkw_kwh,
+    klassifiziere_pv_monat,
+    PV_STATUS_OK,
+    PV_STATUS_VERTEILT,
+    PV_STATUS_TEIL_LUECKE,
+    PV_STATUS_FEHLT,
 )
 
 
@@ -507,6 +512,12 @@ class DatenChecker:
             ))
             return ergebnisse
 
+        # PV-Erzeugung anlagenweit prüfen (kWp-Verteilung-Etappe): gemessen=OK,
+        # über Aggregat verteilt=INFO, Teil-Lücke=WARNING, gar keine PV-Quelle=
+        # ERROR. Ersetzt die frühere Pro-Modul-„fehlt"-WARNING — ein einzelner
+        # Gesamtwert (Monatsdaten.pv_erzeugung_kwh) deckt jetzt alle Strings ab.
+        ergebnisse.extend(self._check_pv_erzeugung(anlage, monatsdaten))
+
         for inv in aktive:
             name = f"{inv.bezeichnung} ({inv.typ})"
             param = inv.parameter or {}
@@ -526,9 +537,10 @@ class DatenChecker:
                         details="Wird für PVGIS-Solarprognose benötigt",
                         link="/einstellungen/investitionen",
                     ))
-                ergebnisse.extend(self._check_investition_monatsdaten(
-                    inv, name, "pv_erzeugung_kwh", "PV-Erzeugung", CheckSeverity.WARNING, monatsdaten,
-                ))
+                # PV-Erzeugungs-Vollständigkeit: anlagenweit in
+                # _check_pv_erzeugung (kWp-Verteilung) — hier NICHT pro Modul
+                # prüfen, sonst meldet jeder String „fehlt", obwohl ein
+                # Gesamt-Aggregat alle deckt.
 
             elif inv.typ == "balkonkraftwerk":
                 if not param.get("leistung_wp"):
@@ -1700,6 +1712,118 @@ class DatenChecker:
             (md.jahr, md.monat) for md in monatsdaten
             if start is None or (md.jahr, md.monat) >= start
         )
+
+    def _check_pv_erzeugung(
+        self, anlage: Anlage, monatsdaten: list[Monatsdaten]
+    ) -> list[CheckErgebnis]:
+        """Anlagenweite PV-Erzeugungs-Prüfung (kWp-Verteilung-Etappe).
+
+        Pro erwartetem Monat wird die Quellenlage klassifiziert (SoT
+        ``klassifiziere_pv_monat``): alle aktiven Module messen → OK; ein
+        Gesamt-Aggregat (``Monatsdaten.pv_erzeugung_kwh``) deckt fehlende
+        Strings über kWp-Verteilung ab → INFO; Teil-Lücke ohne Aggregat →
+        WARNING; gar keine PV-Quelle → ERROR (Konvention Gernot 2026-06-06:
+        nichts berechenbar = ERROR, konsistent mit „Kein Strompreis").
+
+        Scope: PV-Module (Strings). Balkonkraftwerk behält die eigene Pro-
+        Modul-Prüfung (eigener Einzel-Sensor, keine String-Verteilung).
+        """
+        ergebnisse: list[CheckErgebnis] = []
+        kat = CheckKategorie.INVESTITIONEN
+        heute = date.today()
+
+        pv_module = [
+            i for i in anlage.investitionen
+            if i.typ == "pv-module" and i.ist_aktiv_an(heute)
+        ]
+        if not pv_module:
+            return ergebnisse  # „keine PV-Module" meldet bereits _check_stammdaten
+
+        # Erwartete Monate = Vereinigung der Pro-Modul-Erwartungen (jeweils ab
+        # anschaffungsdatum, nur Monate mit Monatsdaten-Zeile).
+        erwartete = sorted({
+            m for inv in pv_module for m in self._erwartete_monate(inv, monatsdaten)
+        })
+        if not erwartete:
+            return ergebnisse
+
+        agg_map = {(md.jahr, md.monat): md.pv_erzeugung_kwh for md in monatsdaten}
+        imd_map = {
+            (inv.id, imd.jahr, imd.monat): (imd.verbrauch_daten or {})
+            for inv in pv_module for imd in inv.monatsdaten
+        }
+
+        fehlt: list[str] = []
+        teil_luecke: list[str] = []
+        verteilt: list[str] = []
+        ok_count = 0
+
+        for (jahr, monat) in erwartete:
+            aktive = [inv for inv in pv_module if inv.ist_aktiv_im_monat(jahr, monat)]
+            if not aktive:
+                continue
+            n_gemessen = sum(
+                1 for inv in aktive
+                if imd_map.get((inv.id, jahr, monat), {}).get("pv_erzeugung_kwh") is not None
+            )
+            status = klassifiziere_pv_monat(
+                n_aktive_module=len(aktive),
+                n_gemessen=n_gemessen,
+                aggregat_kwh=agg_map.get((jahr, monat)),
+            )
+            label = f"{monat:02d}/{jahr}"
+            if status == PV_STATUS_OK:
+                ok_count += 1
+            elif status == PV_STATUS_VERTEILT:
+                verteilt.append(label)
+            elif status == PV_STATUS_TEIL_LUECKE:
+                teil_luecke.append(label)
+            else:  # PV_STATUS_FEHLT
+                fehlt.append(label)
+
+        def _monate(liste: list[str]) -> str:
+            txt = ", ".join(liste[:6])
+            if len(liste) > 6:
+                txt += f" (+{len(liste) - 6} weitere)"
+            return txt
+
+        if fehlt:
+            ergebnisse.append(CheckErgebnis(
+                kategorie=kat, schwere=CheckSeverity.ERROR,
+                meldung=f"PV-Erzeugung fehlt in {len(fehlt)} Monat(en)",
+                details=(
+                    "Keine PV-Quelle (weder Pro-Modul-Werte noch ein "
+                    f"Gesamtwert): {_monate(fehlt)}"
+                ),
+                link="/einstellungen/monatsdaten",
+            ))
+        if teil_luecke:
+            ergebnisse.append(CheckErgebnis(
+                kategorie=kat, schwere=CheckSeverity.WARNING,
+                meldung=f"PV-Erzeugung unvollständig in {len(teil_luecke)} Monat(en)",
+                details=(
+                    "Nur ein Teil der Strings erfasst und kein Gesamtwert zum "
+                    f"Verteilen hinterlegt: {_monate(teil_luecke)}"
+                ),
+                link="/einstellungen/monatsdaten",
+            ))
+        if verteilt:
+            ergebnisse.append(CheckErgebnis(
+                kategorie=kat, schwere=CheckSeverity.INFO,
+                meldung=f"PV-Erzeugung über kWp-Anteil geschätzt in {len(verteilt)} Monat(en)",
+                details=(
+                    "Gesamtwert wird anteilig nach kWp auf die Strings verteilt — "
+                    f"Pro-String-Genauigkeit eingeschränkt: {_monate(verteilt)}"
+                ),
+                link="/einstellungen/monatsdaten",
+            ))
+        if not fehlt and not teil_luecke and not verteilt and ok_count:
+            ergebnisse.append(CheckErgebnis(
+                kategorie=kat, schwere=CheckSeverity.OK,
+                meldung=f"PV-Erzeugung: Monatsdaten vollständig ({ok_count} Monate)",
+            ))
+
+        return ergebnisse
 
     def _check_investition_monatsdaten(
         self,
