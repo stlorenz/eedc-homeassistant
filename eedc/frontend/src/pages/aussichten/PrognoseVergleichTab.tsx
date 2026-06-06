@@ -197,6 +197,8 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [reloadTick, setReloadTick] = useState(0)
   const [genauigkeitsModus, setGenauigkeitsModus] = useState<'kompakt' | 'diagnostisch'>('kompakt')
+  // Zeitfenster fürs Genauigkeits-Tracking (Backend: 7–90). Default 10 (#296 #8/#9).
+  const [genauigkeitsTage, setGenauigkeitsTage] = useState(10)
   // Wetter-Backfill für Stratifizierung
   const [backfillRunning, setBackfillRunning] = useState(false)
   const [backfillResult, setBackfillResult] = useState<string | null>(null)
@@ -234,12 +236,11 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
       setLoading(true)
       setError(null)
       try {
-        const [prognosen, accuracy, strat] = await Promise.all([
+        const [prognosen, strat] = await Promise.all([
           aussichtenApi.getPrognosenVergleich(anlageId),
-          aussichtenApi.getPrognosenGenauigkeit(anlageId, 30).catch(() => null),
           getStratifizierung(anlageId, 90).catch(() => null),
         ])
-        if (!cancelled) { setData(prognosen); setGenauigkeit(accuracy); setStratifizierung(strat) }
+        if (!cancelled) { setData(prognosen); setStratifizierung(strat) }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Fehler beim Laden')
       } finally {
@@ -249,6 +250,16 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
     load()
     return () => { cancelled = true }
   }, [anlageId, reloadTick])
+
+  // Genauigkeits-Tracking eigenständig — reagiert auf den Tage-Selector (#296 #8),
+  // ohne die teuren Prognose-/Wetter-Abrufe neu auszulösen.
+  useEffect(() => {
+    let cancelled = false
+    aussichtenApi.getPrognosenGenauigkeit(anlageId, genauigkeitsTage)
+      .then(acc => { if (!cancelled) setGenauigkeit(acc) })
+      .catch(() => { if (!cancelled) setGenauigkeit(null) })
+    return () => { cancelled = true }
+  }, [anlageId, genauigkeitsTage, reloadTick])
 
   if (loading) return <div className="flex justify-center py-12"><LoadingSpinner /></div>
   if (error) return <Alert type="error">{error}</Alert>
@@ -843,6 +854,19 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Genauigkeits-Tracking <span className="text-sm font-normal text-gray-500 ml-2">(letzte {genauigkeit.anzahl_tage} Tage)</span>
             </h3>
+            <div className="flex items-center gap-3">
+            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 text-xs overflow-hidden">
+              {([7, 10, 30] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setGenauigkeitsTage(t)}
+                  className={`px-3 py-1 transition-colors ${genauigkeitsTage === t ? 'bg-primary-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                >
+                  {t} T
+                </button>
+              ))}
+            </div>
             <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 text-xs overflow-hidden">
               <button
                 type="button"
@@ -858,6 +882,7 @@ export default function PrognoseVergleichTab({ anlageId }: Props) {
               >
                 Diagnostisch
               </button>
+            </div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
