@@ -495,10 +495,15 @@ async def get_hourly_counter_sum_by_feld(
     investitionen_by_id: dict,
     datum: date,
     feld: str,
-) -> dict[int, Optional[int]]:
+    as_float: bool = False,
+) -> dict[int, Optional[float]]:
     """
     Berechnet Stunden-Counter-Summen für ein bestimmtes Feld (z.B. 'wp_starts_anzahl'),
     summiert über alle Investitionen mit gemapptem Counter.
+
+    `as_float=False` (Default) liefert ganzzahlige Summen (Zähl-Counter wie
+    Kompressor-Starts). `as_float=True` erhält die Nachkommastellen (z.B.
+    Betriebsstunden, #238 — 0..1 h pro WP und Stunde), gerundet auf 3 Stellen.
 
     Backward-Konvention nach Issue #144 (an kWh-Pfad angeglichen, Etappe 3c P2):
     Slot h = `snap[h] − snap[h-1]` = Inkremente [Vortag-23 + h, ..., Heute-h)
@@ -553,10 +558,10 @@ async def get_hourly_counter_sum_by_feld(
     # und Stundentab, Forum-Befund Martin 2026-05-11).
     MAX_PLAUSIBLE_COUNTER_PER_HOUR = 200
 
-    result: dict[int, Optional[int]] = {}
+    result: dict[int, Optional[float]] = {}
     for slot_idx, prev_off, curr_off in rng.slot_pairs:
         any_value = False
-        total = 0
+        total = 0.0
         for sensor_key, _ in relevant_invs:
             s0 = snaps_per_inv[sensor_key][prev_off]
             s1 = snaps_per_inv[sensor_key][curr_off]
@@ -572,7 +577,10 @@ async def get_hourly_counter_sum_by_feld(
                     f"{MAX_PLAUSIBLE_COUNTER_PER_HOUR} → 0"
                 )
                 d = 0
-            total += int(round(d))
+            total += d if as_float else int(round(d))
             any_value = True
-        result[slot_idx] = total if any_value else None
+        if not any_value:
+            result[slot_idx] = None
+        else:
+            result[slot_idx] = round(total, 3) if as_float else int(total)
     return result

@@ -335,6 +335,52 @@ async def build_jahresbericht_context(
     wp_cop = _safe_div(wp_waerme, wp_strom) if (wp_strom and wp_waerme) else None
     emob_pv_anteil = _safe_div(emob_pv, emob_ladung) * 100 if emob_ladung else None
 
+    # ── WP-Counter (#238): Kompressor-Starts + Betriebsstunden über den
+    # Berichtszeitraum aus TagesZusammenfassung.komponenten_starts summiert.
+    # Quelle/Logik analog zum Monatsbericht (aktueller_monat.py); respektiert
+    # Anschaffungs-/Stilllegungsdatum je WP über ist_aktiv_im_monat.
+    wp_starts_summe: Optional[int] = None
+    wp_betriebsstunden_summe: Optional[float] = None
+    if hat_waermepumpe:
+        from backend.models.tages_energie_profil import TagesZusammenfassung
+        from sqlalchemy import extract as _extract
+        wp_invs = [i for i in investitionen if i.typ == "waermepumpe"]
+        tz_stmt = (
+            select(TagesZusammenfassung.datum, TagesZusammenfassung.komponenten_starts)
+            .where(TagesZusammenfassung.anlage_id == anlage_id)
+            .where(TagesZusammenfassung.komponenten_starts.is_not(None))
+        )
+        if jahr is not None:
+            tz_stmt = tz_stmt.where(_extract("year", TagesZusammenfassung.datum) == jahr)
+        tz_res = await db.execute(tz_stmt)
+        starts_total = 0
+        stunden_total = 0.0
+        hat_starts = hat_stunden = False
+        for datum_, komp in tz_res.all():
+            aktive_ids = {
+                str(i.id) for i in wp_invs
+                if i.ist_aktiv_im_monat(datum_.year, datum_.month)
+            }
+            if not aktive_ids:
+                continue
+            for inv_id_str, c in ((komp or {}).get("wp_starts_anzahl") or {}).items():
+                if inv_id_str in aktive_ids and isinstance(c, (int, float)) and c > 0:
+                    starts_total += int(c)
+                    hat_starts = True
+            for inv_id_str, h in ((komp or {}).get("wp_betriebsstunden") or {}).items():
+                if inv_id_str in aktive_ids and isinstance(h, (int, float)) and h > 0:
+                    stunden_total += float(h)
+                    hat_stunden = True
+        if hat_starts:
+            wp_starts_summe = starts_total
+        if hat_stunden:
+            wp_betriebsstunden_summe = round(stunden_total, 1)
+    # Ø Laufzeit pro Start (h) als Auslegungs-Indikator — nur wenn beides vorhanden.
+    wp_laufzeit_pro_start = (
+        round(wp_betriebsstunden_summe / wp_starts_summe, 2)
+        if wp_starts_summe and wp_betriebsstunden_summe else None
+    )
+
     # ── 10. String-Vergleich SOLL/IST ───────────────────────────────────
     pv_module = [i for i in investitionen if i.typ == "pv-module"]
     gesamt_kwp = sum(i.leistung_kwp or 0 for i in pv_module) or (anlage.leistung_kwp or 1)
@@ -455,6 +501,9 @@ async def build_jahresbericht_context(
             "warmwasser_kwh": wp_warmwasser,
             "strom_kwh": wp_strom,
             "cop": wp_cop,
+            "starts_summe": wp_starts_summe,
+            "betriebsstunden_summe": wp_betriebsstunden_summe,
+            "laufzeit_pro_start_h": wp_laufzeit_pro_start,
         },
         "emob": {
             "vorhanden": hat_emobilitaet,

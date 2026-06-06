@@ -301,16 +301,20 @@ async def aggregate_day(
             kwh_pro_stunde = {}
         kwh_source_label = "auto:monatsabschluss"
 
-    # ── Stunden-Counter (Issue #136: WP-Starts pro Stunde) ────────────────
+    # ── Stunden-Counter (Issue #136/#238: WP-Starts + Betriebsstunden pro Stunde) ──
     wp_starts_pro_stunde: dict[int, Optional[int]] = {}
+    wp_betriebsstunden_pro_stunde: dict[int, Optional[float]] = {}
     try:
         from backend.services.sensor_snapshot_service import get_hourly_counter_sum_by_feld
         wp_starts_pro_stunde = await get_hourly_counter_sum_by_feld(
             db, anlage, invs_by_id, datum, "wp_starts_anzahl",
         )
+        wp_betriebsstunden_pro_stunde = await get_hourly_counter_sum_by_feld(
+            db, anlage, invs_by_id, datum, "wp_betriebsstunden", as_float=True,
+        )
     except Exception as e:
         logger.warning(
-            f"Anlage {anlage.id}, {datum}: WP-Starts-Stunden-Aggregation fehlgeschlagen: "
+            f"Anlage {anlage.id}, {datum}: WP-Counter-Stunden-Aggregation fehlgeschlagen: "
             f"{type(e).__name__}: {e}"
         )
 
@@ -496,6 +500,7 @@ async def aggregate_day(
             boersenpreis_cent=round(boersenpreis, 2) if boersenpreis is not None else None,
             komponenten={k: v for k, v in werte.items() if k != "strompreis"} if werte else None,
             wp_starts_anzahl=wp_starts_pro_stunde.get(h),
+            wp_betriebsstunden=wp_betriebsstunden_pro_stunde.get(h),
         )
         db.add(profil)
         seed_tep_provenance(profil, writer=auto_writer, source=kwh_source_label)

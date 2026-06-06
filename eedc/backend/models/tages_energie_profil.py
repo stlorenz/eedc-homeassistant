@@ -64,6 +64,9 @@ class TagesEnergieProfil(Base):
     # summiert über alle WP-Investitionen mit gemapptem Starts-Zähler.
     # Pro-Investitions-Aufschlüsselung lebt auf Tagesebene in TagesZusammenfassung.komponenten_starts.
     wp_starts_anzahl: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Counter pro Stunde (Issue #238): WP-Betriebsstunden in dieser Stunde (0..1 h pro
+    # WP), summiert über alle WP-Investitionen mit gemapptem Betriebsstunden-Zähler.
+    wp_betriebsstunden: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Bilanz
     ueberschuss_kw: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
