@@ -13,6 +13,10 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 - **Setup-Wizard: Sensor-Zuordnung auf zwei klare Optionen reduziert (Daten-Checker-Achse A1).** Jedes Feld bietet jetzt nur noch **„HA-Sensor"** oder **„Kein Sensor"** (manuell im Monatsabschluss erfassen / bewusst leer). Die früheren Auswahlen „kWp-Verteilung", „EV-Quote berechnen", „JAZ-/COP-Berechnung" und „Manuell eingeben" waren eine Falle: der Wizard bot sie an, aber nur ein echter HA-Sensor lieferte je Daten — der Rest blieb wirkungslos. Die jeweilige Logik passiert weiterhin automatisch zur Auswertung (z. B. PV-Gesamterzeugung wird anteilig nach kWp auf die Strings verteilt, Heizwärme aus Stromverbrauch × JAZ geschätzt), ohne dass im Wizard eine Strategie gewählt werden muss. Bestehende Zuordnungen mit einer der alten Optionen werden beim Update automatisch auf „Kein Sensor" umgestellt.
 
+### Fixed
+
+- **Daten-Checker: maskierter Fehler im Datenquelle-Drift-Check.** Im `except`-Zweig von `_check_datenquelle_drift` zeigte ein fehlgeschlagener HA-LTS-Read auf ein undefiniertes `logger` → der eigentliche Fehler wurde durch einen `NameError` verdeckt. Jetzt wird der HA-LTS-Read-Fehler korrekt geloggt (DEBUG) und der Tag übersprungen, statt den echten Fehler zu maskieren. [[feedback_silent_except_logs]]
+
 ### Intern (nicht anwender-sichtbar)
 
 - `StrategieTyp`-Enum (Backend + Frontend) auf `sensor`/`keine` reduziert; idempotente Startup-Migration `_migrate_sensor_mapping_strategien_clear` schreibt Dead-Strategie-Werte im `sensor_mapping`-JSON auf `keine` um (Hard-Precondition vor der Enum-Reduktion, da `FeldMapping.strategie` Pydantic-validiert ist). 7 Migrations-Tests. [[project_datenchecker_konsistenz]] Achse A.

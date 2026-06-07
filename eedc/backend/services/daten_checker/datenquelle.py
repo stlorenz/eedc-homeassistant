@@ -6,6 +6,7 @@ Reiner Move aus dem früheren Modul `daten_checker.py` (Tier-4 Achse C).
 """
 
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -19,6 +20,8 @@ from backend.core.berechnungen import (
 )
 
 from .kategorien import CheckErgebnis, CheckKategorie, CheckSeverity, _quelle_label
+
+logger = logging.getLogger(__name__)
 
 
 class DatenquelleChecks:
