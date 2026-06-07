@@ -9,6 +9,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Setup-Wizard: Sensor-Zuordnung auf zwei klare Optionen reduziert (Daten-Checker-Achse A1).** Jedes Feld bietet jetzt nur noch **„HA-Sensor"** oder **„Kein Sensor"** (manuell im Monatsabschluss erfassen / bewusst leer). Die früheren Auswahlen „kWp-Verteilung", „EV-Quote berechnen", „JAZ-/COP-Berechnung" und „Manuell eingeben" waren eine Falle: der Wizard bot sie an, aber nur ein echter HA-Sensor lieferte je Daten — der Rest blieb wirkungslos. Die jeweilige Logik passiert weiterhin automatisch zur Auswertung (z. B. PV-Gesamterzeugung wird anteilig nach kWp auf die Strings verteilt, Heizwärme aus Stromverbrauch × JAZ geschätzt), ohne dass im Wizard eine Strategie gewählt werden muss. Bestehende Zuordnungen mit einer der alten Optionen werden beim Update automatisch auf „Kein Sensor" umgestellt.
+
+### Intern (nicht anwender-sichtbar)
+
+- `StrategieTyp`-Enum (Backend + Frontend) auf `sensor`/`keine` reduziert; idempotente Startup-Migration `_migrate_sensor_mapping_strategien_clear` schreibt Dead-Strategie-Werte im `sensor_mapping`-JSON auf `keine` um (Hard-Precondition vor der Enum-Reduktion, da `FeldMapping.strategie` Pydantic-validiert ist). 7 Migrations-Tests. [[project_datenchecker_konsistenz]] Achse A.
+
 ---
 
 ## [3.38.0] - 2026-06-06 — CO₂-Amortisation, kWp-String-Verteilung & §51-Negativpreise
