@@ -35,8 +35,10 @@ from backend.services.ha_sensors_export import (
     SensorDefinition, SensorValue, SensorCategory,
     ANLAGE_SENSOREN, INVESTITION_SENSOREN, E_AUTO_SENSOREN,
     WAERMEPUMPE_SENSOREN, SPEICHER_SENSOREN, LETZTER_IMPORT_SENSOREN,
+    PROGNOSE_SENSOREN,
     get_all_sensor_definitions
 )
+from backend.services.ha_export_prognose import berechne_prognose_export
 from backend.services.mqtt_client import MQTTClient, MQTTConfig
 from backend.services.ha_mqtt_sync import resolve_mqtt_config, publish_anlage_sensors
 from backend.core.investition_parameter import (
@@ -698,6 +700,32 @@ async def calculate_anlage_sensors(
                     berechnung=berechnung
                 ))
 
+    # #150 A: eedc-eigene PV-Prognose (OpenMeteo × Lernfaktor) — anlage-weit,
+    # koordinaten-/PV-gated, netzwerk-tolerant (None → Sensoren entfallen).
+    # Stundenprofil reist als Attribut mit (kein eigenes Topic).
+    prognose = await berechne_prognose_export(db, anlage)
+    if prognose:
+        for sensor in PROGNOSE_SENSOREN:
+            value = None
+            zusatz: dict = {}
+            if sensor.key == "eedc_prognose_rest_today_kwh":
+                value = prognose["rest_today_kwh"]
+                if prognose.get("stundenprofil_heute"):
+                    zusatz = {"stundenprofil_kwh": prognose["stundenprofil_heute"]}
+            elif sensor.key == "eedc_prognose_day_plus_1_kwh":
+                value = prognose["day_plus_1_kwh"]
+            elif sensor.key == "eedc_prognose_day_plus_2_kwh":
+                value = prognose["day_plus_2_kwh"]
+            elif sensor.key == "eedc_prognose_day_plus_3_kwh":
+                value = prognose["day_plus_3_kwh"]
+            elif sensor.key == "eedc_speicher_voll_um":
+                value = prognose["speicher_voll_um"]
+
+            if value is not None:
+                sensor_values.append(SensorValue(
+                    definition=sensor, value=value, zusatz_attribute=zusatz
+                ))
+
     return sensor_values
 
 
@@ -1285,9 +1313,9 @@ async def remove_sensors_mqtt(
             detail="MQTT nicht verfügbar"
         )
 
-    # Alle Anlage-Sensoren entfernen
+    # Alle Anlage-Sensoren entfernen (inkl. #150-Prognose-Sensoren)
     removed = 0
-    for sensor in ANLAGE_SENSOREN:
+    for sensor in ANLAGE_SENSOREN + PROGNOSE_SENSOREN:
         if await client.remove_sensor(sensor, anlage.id):
             removed += 1
 

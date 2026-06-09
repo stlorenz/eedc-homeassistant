@@ -25,6 +25,7 @@ class SensorCategory(str, Enum):
     SPEICHER = "speicher"       # Speicher spezifisch
     WALLBOX = "wallbox"         # Wallbox spezifisch
     STATUS = "status"           # Status-Informationen (letzter Import, etc.)
+    PROGNOSE = "prognose"       # PV-Prognose (eedc-eigen, Vorausschau)
 
 
 @dataclass
@@ -380,6 +381,63 @@ LETZTER_IMPORT_SENSOREN = [
 ]
 
 # =============================================================================
+# SENSOR-DEFINITIONEN - PV-Prognose (eedc-eigen, Vorausschau) — Issue #150 A
+# =============================================================================
+# Anlage-weite Werte (kein investition_id) → gruppieren automatisch unter dem
+# Anlage-Device. Stundenprofile reisen als Sensor-Attribut mit (HA historisiert
+# Attribute nicht — kein 24-Topic-Spam).
+PROGNOSE_SENSOREN = [
+    SensorDefinition(
+        key="eedc_prognose_rest_today_kwh",
+        name="PV-Prognose Rest heute",
+        unit="kWh",
+        icon="mdi:solar-power",
+        category=SensorCategory.PROGNOSE,
+        formel="IST bisher + Σ Rest-Stunden (eedc = OpenMeteo × Lernfaktor)",
+        device_class="energy",
+        state_class="measurement",
+    ),
+    SensorDefinition(
+        key="eedc_prognose_day_plus_1_kwh",
+        name="PV-Prognose morgen",
+        unit="kWh",
+        icon="mdi:solar-power",
+        category=SensorCategory.PROGNOSE,
+        formel="eedc-Tagesprognose morgen (OpenMeteo × Lernfaktor)",
+        device_class="energy",
+        state_class="measurement",
+    ),
+    SensorDefinition(
+        key="eedc_prognose_day_plus_2_kwh",
+        name="PV-Prognose übermorgen",
+        unit="kWh",
+        icon="mdi:solar-power",
+        category=SensorCategory.PROGNOSE,
+        formel="eedc-Tagesprognose übermorgen (OpenMeteo × Lernfaktor)",
+        device_class="energy",
+        state_class="measurement",
+    ),
+    SensorDefinition(
+        key="eedc_prognose_day_plus_3_kwh",
+        name="PV-Prognose in 3 Tagen",
+        unit="kWh",
+        icon="mdi:solar-power",
+        category=SensorCategory.PROGNOSE,
+        formel="eedc-Tagesprognose Tag+3 (OpenMeteo × Lernfaktor)",
+        device_class="energy",
+        state_class="measurement",
+    ),
+    SensorDefinition(
+        key="eedc_speicher_voll_um",
+        name="Speicher voll um",
+        unit="",
+        icon="mdi:battery-clock",
+        category=SensorCategory.PROGNOSE,
+        formel="SoC-Simulation ab aktuellem Speicherstand: Uhrzeit, zu der der Speicher voll ist",
+    ),
+]
+
+# =============================================================================
 # ALLE SENSOREN ZUSAMMENGEFASST
 # =============================================================================
 ALL_SENSOR_DEFINITIONS = {
@@ -389,6 +447,7 @@ ALL_SENSOR_DEFINITIONS = {
     "waermepumpe": WAERMEPUMPE_SENSOREN,
     "speicher": SPEICHER_SENSOREN,
     "status": LETZTER_IMPORT_SENSOREN,
+    "prognose": PROGNOSE_SENSOREN,
 }
 
 

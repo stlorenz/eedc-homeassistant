@@ -100,6 +100,10 @@ from backend.core.berechnungen.speicher import (
     gleitende_effizienz,
     speicher_effizienz_prozent,
 )
+from backend.core.berechnungen.speicher_simulation import (
+    SpeicherSimErgebnis,
+    simuliere_speicher_tag,
+)
 from backend.core.berechnungen.verbrauch import (
     VerbrauchsKennzahlen,
     berechne_verbrauchs_kennzahlen,
@@ -146,6 +150,8 @@ __all__ = [
     "pruefe_speicher_netzladung_kumulativ",
     "assert_speicher_durchsatz_konsistent",
     "pruefe_speicher_durchsatz_konsistenz",
+    "SpeicherSimErgebnis",
+    "simuliere_speicher_tag",
     "EFFIZIENZ_FENSTER_MONATE",
     "MonatsEffizienz",
     "gleitende_effizienz",
