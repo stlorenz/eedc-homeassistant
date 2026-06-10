@@ -20,6 +20,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Anker SOLIX Cloud-Import: Login auf das aktuelle Anker-Schema portiert (#328).** Der Login schlug mit dem veralteten Schema (MD5-Doppelhash, leerer Public-Key) fehl — die aktuelle Anker-API verlangt einen ECDH-Schlüsselaustausch (P-256) mit AES-256-CBC-verschlüsseltem Passwort sowie die Header `x-auth-token` und `gtoken = MD5(user_id)`. Zusätzlich war der Daten-Endpunkt `energy_daily` tot — die Tageswerte kommen jetzt über `energy_analysis` (Abfrage-Fenster beidseitig tag-inklusiv, EcoFlow-Lehre). E-Mail/Passwort werden vor dem API-Call getrimmt, Anker-Fehlercodes (falsches Passwort, Verifizierungs-Pflicht, Rate-Limit) erscheinen als verständliche Meldung in der UI. Neue explizite Dependency `cryptography`. Der Provider bleibt als „ungetestet" markiert, bis der Gegentest mit echtem Gerät grün ist (Johnny_1993, simon42 #652).
 - **Aussichten-Dienstwagen-Abzug: evcc-Importe ohne expliziten Netz-Key wurden als Netz=0 gewertet.** Die Aussichten lasen `ladung_netz_kwh` roh, während das Cockpit seit #262 den SoT-Helper `get_emob_pv_netz_kwh` (mit evcc-Fallback) nutzt — jetzt beidseitig derselbe Helper.
 
 ---
