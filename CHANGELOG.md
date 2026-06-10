@@ -9,6 +9,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added
+
+- **Geräte-Connector: täglicher automatischer Zählerstand-Abruf (#300).** Neuer Scheduler-Job `connector_daily_poll` (täglich 03:30) liest die kWh-Zählerstände aller Anlagen mit konfiguriertem Connector und speichert sie als Snapshot — **unabhängig vom MQTT-Inbound**. Bisher pollte nur die Connector-MQTT-Bridge automatisch, und die startet nur mit aktivem MQTT-Inbound; ohne MQTT füllte sich der Monatsabschluss-Vorschlag nur über manuelles „Aktuelle Daten anfordern" (Safi105, Fronius Gen24). Ein Snapshot pro Tag genügt, weil Monatsabschluss und `/connectors/monatswerte` die Monats-Differenz read-seitig aus den Snapshot-Randwerten berechnen.
+
+### Intern (nicht anwender-sichtbar)
+
+- Die `/connectors/fetch`-Logik (Zählerstand lesen → Snapshot + `last_fetch` speichern → Activity-Log) ist in den gemeinsamen Service `services/connectors/fetch_service.py` extrahiert; manueller Endpoint und Tages-Job nutzen denselben Pfad (kein Drift zwischen manuell und automatisch). Neue Tests `test_connector_daily_poll_300.py`.
+
 ---
 
 ## [3.40.0] - 2026-06-09 — eedc-Werte nach HA: PV-Prognose & Börsenpreis-Trigger als Sensoren
