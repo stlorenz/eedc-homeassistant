@@ -7,6 +7,22 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Dokumente: mehrere Berichte als ein ZIP herunterladen (#121-Rest).** In Einstellungen → Stammdaten → Anlage → Dokumente lassen sich die PDF-Berichte jetzt per Checkbox auswählen und ab zwei Stück gesammelt als ZIP laden (Dateinamen wie die Einzel-Downloads, inkl. Jahres-Auswahl). Schlägt ein Bericht fehl, gibt es kein halbes ZIP — die Fehlermeldung benennt den betroffenen Bericht.
+
+### Changed
+
+- **Aussichten rechnen die historischen Erträge über das gemeinsame Finanz-Aggregat (#326-Folge).** `get_finanz_prognose` baut Einspeise-Erlös, EV-/BKW-Ersparnis und Sonstige jetzt über den SoT-Helper `berechne_finanz_aggregat` auf — inklusive per-Monat-Flexpreis und per-Monat-Tarif über den `gueltig_ab`-Stichtag, exakt wie das Cockpit; WP-/E-Auto-Alternativkosten und der Prognose-Teil bleiben lokal. Der **Dienstwagen-Ladekosten-Abzug** rechnet jetzt per-Monat-Flexpreis — gleichzeitig in Aussichten **und** Cockpit (Einspeisevergütung bleibt Vertragswert). Neuer Symmetrie-Test: Cockpit-Netto == Aussichten-bisherige-Erträge auf gemeinsamem Fixture (Flex + Speicher + Sonstige + Dienstwagen). Verhaltensänderung: BKW-Monate ohne Monatsdaten-Zeile zählen nicht mehr ins Aggregat (entspricht dem Cockpit).
+
+### Fixed
+
+- **Aussichten-Dienstwagen-Abzug: evcc-Importe ohne expliziten Netz-Key wurden als Netz=0 gewertet.** Die Aussichten lasen `ladung_netz_kwh` roh, während das Cockpit seit #262 den SoT-Helper `get_emob_pv_netz_kwh` (mit evcc-Fallback) nutzt — jetzt beidseitig derselbe Helper.
+
+---
+
 ## [3.41.0] - 2026-06-10 — Konsistente Finanzwerte, täglicher Connector-Abruf & Jahresbericht-Abschluss
 
 > ✨ **Minor / Feature + Fixes.** Drei Tester-Anliegen in einem Release: durchgängig identische Finanzwerte über Cockpit/PDF/HA-Export bei dynamischen Stromtarifen (#326, rilmor-mhrs), täglicher automatischer Connector-Abruf ohne MQTT-Inbound (#300, Safi105) und der abgeschlossene Jahresbericht mit Speicher-Sektion auf einer einzigen PDF-Engine (#303, kingcap1). 939 Backend-Tests grün.
