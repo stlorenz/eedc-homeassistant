@@ -20,12 +20,13 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
-- **Durchgängig konsistente Finanzwerte bei dynamischen Stromtarifen (#326).** Cockpit, Jahresbericht-PDF und HA-Export rechneten Eigenverbrauchs-Ersparnis, Netto-Ertrag und ROI jeweils selbst — teils Gesamt-Eigenverbrauch × Durchschnittspreis statt Monat für Monat × Monatspreis, teils ohne Speicher-/V2H-Anteil oder ohne „Sonstige Erträge & Ausgaben". Bei Flex-Tarifen (Tibber/aWATTar/EPEX) liefen die Sichten dadurch auseinander (rilmor-mhrs, #326). Jetzt rechnen alle aggregierenden Read-Sites über den gemeinsamen SoT-Helper `core/berechnungen/finanz_aggregat.py` (per-Monat-Flexpreis, §51-Einspeise-Erlös, Sonstige Positionen) — identische Werte in allen Sichten; ein Symmetrie-Test sichert Cockpit == PDF == HA-Export ab.
+- **Durchgängig konsistente Finanzwerte bei dynamischen Stromtarifen (#326).** Cockpit, Jahresbericht-PDF und HA-Export rechneten Eigenverbrauchs-Ersparnis, Netto-Ertrag und ROI jeweils selbst — teils Gesamt-Eigenverbrauch × Durchschnittspreis statt Monat für Monat × Monatspreis, teils ohne Speicher-/V2H-Anteil oder ohne „Sonstige Erträge & Ausgaben". Bei Flex-Tarifen (Tibber/aWATTar/EPEX) liefen die Sichten dadurch auseinander (rilmor-mhrs, #326). Jetzt rechnen alle aggregierenden Read-Sites über den gemeinsamen SoT-Helper `core/berechnungen/finanz_aggregat.py` (per-Monat-Flexpreis, §51-Einspeise-Erlös, Sonstige Positionen) — identische Werte in allen Sichten; ein Symmetrie-Test sichert Cockpit == PDF == HA-Export ab. Letzter Restposten mitbehoben: die **BKW-Ersparnis in den Aussichten** rechnete noch `Σ(EV) × statischer Tarifpreis` statt per-Monat — jetzt dasselbe Muster wie die E-Auto-Zeile (`resolve_netzbezug_preis_cent`).
 
 ### Intern (nicht anwender-sichtbar)
 
 - Die `/connectors/fetch`-Logik (Zählerstand lesen → Snapshot + `last_fetch` speichern → Activity-Log) ist in den gemeinsamen Service `services/connectors/fetch_service.py` extrahiert; manueller Endpoint und Tages-Job nutzen denselben Pfad (kein Drift zwischen manuell und automatisch). Neue Tests `test_connector_daily_poll_300.py`.
 - **Jahresbericht-Konsistenz-Regressionstest (kingcap1-Gegencheck #303):** Summary-KPIs (Einspeise-Erlös, EV-Ersparnis, Netto-Ertrag) sind exakt die Summe der gedruckten Monats-Zeilen — gesichert am Fixture mit Speicher + Flex-Tarif + Sonstigen Positionen. PDF-Fehlermeldungen nennen jetzt durchgängig den echten Fehlertyp (`KlassenName: Detail`) statt eines generischen Render-Fehlers.
+- **MQTT-Discovery: `sw_version` zeigt die echte eedc-Version.** Das Device-Info-Payload trug eine hartcodierte, gedriftete Versionsnummer („0.9.2"); jetzt `APP_VERSION`. Toter Helper `_build_device_info` (zweite Hartcodierung „1.0.0", nie aufgerufen) entfernt.
 
 ---
 
