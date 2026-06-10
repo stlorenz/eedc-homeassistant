@@ -21,14 +21,10 @@ if [ -f "$CONFIG_PATH" ]; then
     # HA Recorder Datenbank (optional, für MariaDB/MySQL)
     export HA_RECORDER_DB_URL=$(jq -r '.ha_recorder_db_url // ""' $CONFIG_PATH)
 
-    # PDF-Engine (Issue #121/#303): WeasyPrint ist Default; reportlab = Notausgang
-    export PDF_ENGINE=$(jq -r '.pdf_engine // "weasyprint"' $CONFIG_PATH)
-
     # Live-Snapshot 5-Min (Phase 1 — Counter statt Power-Trapez für Live-Linie)
     export LIVE_SNAPSHOT_5MIN_ENABLED=$(jq -r '.live_snapshot_5min_enabled // false' $CONFIG_PATH)
 else
     export LOG_LEVEL="info"
-    export PDF_ENGINE="weasyprint"
     export LIVE_SNAPSHOT_5MIN_ENABLED="false"
 fi
 

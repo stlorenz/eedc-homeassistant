@@ -13,9 +13,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 - **Geräte-Connector: täglicher automatischer Zählerstand-Abruf (#300).** Neuer Scheduler-Job `connector_daily_poll` (täglich 03:30) liest die kWh-Zählerstände aller Anlagen mit konfiguriertem Connector und speichert sie als Snapshot — **unabhängig vom MQTT-Inbound**. Bisher pollte nur die Connector-MQTT-Bridge automatisch, und die startet nur mit aktivem MQTT-Inbound; ohne MQTT füllte sich der Monatsabschluss-Vorschlag nur über manuelles „Aktuelle Daten anfordern" (Safi105, Fronius Gen24). Ein Snapshot pro Tag genügt, weil Monatsabschluss und `/connectors/monatswerte` die Monats-Differenz read-seitig aus den Snapshot-Randwerten berechnen.
 
+### Changed
+
+- **PDF-Erzeugung: reportlab vollständig entfernt (Phase 5, #303).** WeasyPrint ist die einzige PDF-Engine. Der seit v3.37.0 standardmäßig nie mehr erreichte reportlab-Notausgang (Jahresbericht + Infothek-Dossier) ist abgebaut, ebenso die Add-on-Option `pdf_engine` (bestehende Konfigurationen mit gesetzter Option bleiben gültig, der Wert wird ignoriert). Der alte Notausgang trug noch die #326-Altlast (EV-Ersparnis × statischer Tarifpreis, Eigenverbrauch ohne Speicher/V2H) — die WeasyPrint-Berichte rechnen durchgängig über die SoT-Helper.
+
 ### Intern (nicht anwender-sichtbar)
 
 - Die `/connectors/fetch`-Logik (Zählerstand lesen → Snapshot + `last_fetch` speichern → Activity-Log) ist in den gemeinsamen Service `services/connectors/fetch_service.py` extrahiert; manueller Endpoint und Tages-Job nutzen denselben Pfad (kein Drift zwischen manuell und automatisch). Neue Tests `test_connector_daily_poll_300.py`.
+- **Jahresbericht-Konsistenz-Regressionstest (kingcap1-Gegencheck #303):** Summary-KPIs (Einspeise-Erlös, EV-Ersparnis, Netto-Ertrag) sind exakt die Summe der gedruckten Monats-Zeilen — gesichert am Fixture mit Speicher + Flex-Tarif + Sonstigen Positionen. PDF-Fehlermeldungen nennen jetzt durchgängig den echten Fehlertyp (`KlassenName: Detail`) statt eines generischen Render-Fehlers.
 
 ---
 

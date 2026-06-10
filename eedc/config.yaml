@@ -36,7 +36,6 @@ panel_title: "eedc"
 # Benutzer-Optionen
 options:
   log_level: info
-  pdf_engine: weasyprint
   ha_recorder_db_url: ""
   live_snapshot_5min_enabled: false
   mqtt:
@@ -50,6 +49,9 @@ options:
 
 schema:
   log_level: list(debug|info|warning|error)
+  # Deprecated (Phase 5 #303): reportlab entfernt, Wert wird ignoriert. Bleibt
+  # im Schema, damit bestehende Konfigurationen mit gesetzter Option die
+  # Options-Validierung beim Add-on-Update nicht brechen.
   pdf_engine: list(reportlab|weasyprint)?
   ha_recorder_db_url: str?
   live_snapshot_5min_enabled: bool?

@@ -277,7 +277,7 @@ eedc-homeassistant/
     │       ├── mqtt_inbound_service.py     # MQTT-Inbound (Live + Energy)
     │       ├── mqtt_energy_history_service.py # Energy-Snapshots (SQLite)
     │       ├── energie_profil_service.py    # Tages-Aggregation + Monats-Rollup
-    │       ├── pdf_service.py              # PDF-Export
+    │       ├── pdf/                        # PDF-Export (WeasyPrint + Jinja2 + SVG-Charts)
     │       ├── plz_to_state.py             # PLZ→Bundesland Mapping
     │       ├── prognose_service.py         # Prognose-Berechnungen
     │       ├── kraftstoff_preis_service.py  # EU Oil Bulletin Benzinpreise

@@ -200,9 +200,7 @@ eedc-homeassistant/
     │       ├── mqtt_gateway_service.py    # MQTT-Gateway Topic-Mapping + Presets (v3.4.5)
     │       ├── infothek_datei_service.py  # Bild-Resize, HEIC→JPEG, PDF-Validierung
     │       ├── infothek_migration.py      # stamm_*→Infothek Migration + 1:1→N:M (v3.15.2)
-    │       ├── infothek_pdf_service.py    # Infothek-PDF + Dossier (v3.15.0)
     │       ├── prognose_service.py        # Prognose-Berechnungen
-    │       ├── pdf_service.py             # PDF-Generierung (Jahresbericht)
     │       ├── ha_sensors_export.py
     │       ├── ha_state_service.py        # HA State-Abfragen
     │       ├── mqtt_client.py
@@ -236,10 +234,10 @@ eedc-homeassistant/
     │       │   ├── cache.py               # Wetter-Cache
     │       │   ├── models.py              # Wetter-Datenmodelle
     │       │   └── utils.py
-    │       ├── pdf/                       # PDF-Subsystem (refactored v3.15.0)
-    │       │   ├── engine.py              # WeasyPrint/ReportLab Abstraktion
-    │       │   ├── charts.py              # Chart-Rendering für PDFs
-    │       │   ├── builders/              # Dokument-Builder
+    │       ├── pdf/                       # PDF-Subsystem (WeasyPrint-only seit Phase 5 #303)
+    │       │   ├── engine.py              # WeasyPrint + Jinja2 Wrapper
+    │       │   ├── charts.py              # SVG-Chart-Rendering für PDFs (matplotlib-frei)
+    │       │   ├── builders/              # Dokument-Builder (Jahresbericht, Infothek, …)
     │       │   └── templates/             # Jinja2/HTML-Templates
     │       ├── cloud_import/              # Cloud-Import-Provider (14 Dateien)
     │       │   ├── base.py + registry.py  # ABC + Provider-Registry
