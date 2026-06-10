@@ -7,6 +7,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [Unreleased]
+
+### Intern (nicht anwender-sichtbar)
+
+- **Pre-IA-V4 Berechnungs-Layer-Sweep (ADR-001):** Die vom kommenden Menüstruktur-Umbau (#243) berührten Read-Sites sind vorab auf die zentralen Helper gezogen, damit die UI-Umbauten keine Backend-Strukturmigration mitschleppen. (A) Live-Keyspace-PV-Erkennung nutzt die zentrale `PV_KOMPONENTEN_PREFIXE`-Liste statt Inline-Literalen (`live_history_service`, `live_komponenten_builder` — verhaltensgleich, neuer Konformitäts-Wächter hält die Klasse zu). (B) Die SoC-Tagesvorschau im Energieprofil rechnet über die zentrale Speicher-Simulation `simuliere_speicher_tag()` statt einer eigenen Schleife (Helper additiv um per-Stunde-Bilanz erweitert, Regressionstest gegen die alte Logik). Audit der vier IA-V4-Module abgeschlossen — übrige Sichten SoT-konform; drei dokumentierte Folge-Kandidaten (monatlicher IMD-Typ-Helper, Autarkie-Nenner-Produktentscheid, Kostenformel-Bündelung) bewusst außerhalb des Sweeps.
+
+---
+
 ## [3.42.0] - 2026-06-10 — Saisonale Prognose-Korrektur, Anker-SOLIX-Login & HA-Export-Fixes
 
 > ✨ **Minor / Feature + Fixes.** Die Vor-IA-V4-Abräumrunde in einem Release: die Prognose lernt saisonale Verschattung (Monat × Stunde, Dirk), der Anker-SOLIX-Cloud-Import funktioniert wieder (Login + Daten-Endpunkt portiert, #328 — Gegentest Johnny ausstehend), der HA-Export stolpert nicht mehr (REST-YAML mit echter Adresse, MQTT-Start-Publish, Auto-Publish folgt `mqtt.enabled` — rapahl/Gernot), mehrere PDF-Berichte als ein ZIP (#121-Rest) und die Aussichten rechnen über dasselbe Finanz-Aggregat wie Cockpit/Berichte (#326-Folge). 991 Backend-Tests grün.
