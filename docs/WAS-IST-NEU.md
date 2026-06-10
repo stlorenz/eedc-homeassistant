@@ -22,7 +22,7 @@
 ### Gut zu wissen
 
 - **Aussichten und Cockpit rechnen jetzt auch im Detail identisch** — die Aussichten nutzen dieselbe gemeinsame Finanzberechnung wie Cockpit und Berichte (Monat für Monat mit dem jeweiligen Monatspreis, auch beim Dienstwagen-Abzug). Bei dynamischen Tarifen können sich einzelne Aussichten-Werte dadurch leicht ändern — sie sind jetzt die korrekten.
-- **MQTT-Auto-Publish ist eine Add-on-Option:** Automatische Sensor-Updates über MQTT laufen nur, wenn in der Add-on-Konfiguration `mqtt.auto_publish: true` gesetzt ist — sonst aktualisiert nur der manuelle Klick „Sensoren publizieren".
+- **MQTT-Auto-Publish läuft jetzt automatisch mit, sobald der MQTT-Export aktiviert ist** (`mqtt.enabled: true` in der Add-on-Konfiguration). Bisher brauchte es zusätzlich die separate Option `mqtt.auto_publish` (Standard: aus) — wer die nicht kannte, bekam Sensor-Updates nur beim manuellen Klick „Sensoren publizieren". Die Option bleibt gültig, ist aber nicht mehr nötig.
 
 ---
 

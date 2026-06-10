@@ -7,7 +7,9 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
-## [Unreleased]
+## [3.42.0] - 2026-06-10 — Saisonale Prognose-Korrektur, Anker-SOLIX-Login & HA-Export-Fixes
+
+> ✨ **Minor / Feature + Fixes.** Die Vor-IA-V4-Abräumrunde in einem Release: die Prognose lernt saisonale Verschattung (Monat × Stunde, Dirk), der Anker-SOLIX-Cloud-Import funktioniert wieder (Login + Daten-Endpunkt portiert, #328 — Gegentest Johnny ausstehend), der HA-Export stolpert nicht mehr (REST-YAML mit echter Adresse, MQTT-Start-Publish, Auto-Publish folgt `mqtt.enabled` — rapahl/Gernot), mehrere PDF-Berichte als ein ZIP (#121-Rest) und die Aussichten rechnen über dasselbe Finanz-Aggregat wie Cockpit/Berichte (#326-Folge). 991 Backend-Tests grün.
 
 ### Added
 
@@ -16,6 +18,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Changed
 
+- **MQTT-Auto-Publish läuft automatisch mit, sobald der MQTT-Export aktiviert ist.** Bisher brauchte es neben `mqtt.enabled: true` zusätzlich die separate Add-on-Option `mqtt.auto_publish` (Standard: **aus**) — wer sie nicht kannte, bekam Sensor-Updates in HA nur beim manuellen Klick „Sensoren publizieren". Jetzt registriert `mqtt.enabled: true` den Auto-Publish-Job direkt; `mqtt.auto_publish` bleibt als Schalter für Umgebungen ohne `MQTT_ENABLED` gültig. **Verhaltensänderung:** Installationen mit aktiviertem Export und bewusst deaktiviertem Auto-Publish publizieren künftig stündlich.
 - **Aussichten rechnen die historischen Erträge über das gemeinsame Finanz-Aggregat (#326-Folge).** `get_finanz_prognose` baut Einspeise-Erlös, EV-/BKW-Ersparnis und Sonstige jetzt über den SoT-Helper `berechne_finanz_aggregat` auf — inklusive per-Monat-Flexpreis und per-Monat-Tarif über den `gueltig_ab`-Stichtag, exakt wie das Cockpit; WP-/E-Auto-Alternativkosten und der Prognose-Teil bleiben lokal. Der **Dienstwagen-Ladekosten-Abzug** rechnet jetzt per-Monat-Flexpreis — gleichzeitig in Aussichten **und** Cockpit (Einspeisevergütung bleibt Vertragswert). Neuer Symmetrie-Test: Cockpit-Netto == Aussichten-bisherige-Erträge auf gemeinsamem Fixture (Flex + Speicher + Sonstige + Dienstwagen). Verhaltensänderung: BKW-Monate ohne Monatsdaten-Zeile zählen nicht mehr ins Aggregat (entspricht dem Cockpit).
 
 ### Fixed
