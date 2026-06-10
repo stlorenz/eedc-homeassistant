@@ -17,9 +17,10 @@ from backend.models.investition import Investition, InvestitionMonatsdaten
 from backend.models.pvgis_prognose import PVGISPrognose
 from backend.api.routes.strompreise import lade_tarife_fuer_anlage, resolve_netzbezug_preis_cent
 from backend.core.berechnungen import (
+    FinanzMonatsZeile,
+    berechne_finanz_aggregat,
     berechne_verbrauchs_kennzahlen,
     eauto_effizienz_100km,
-    einspeise_erloes_euro,
 )
 from backend.core.calculations import (
     CO2_FAKTOR_STROM_KG_KWH, CO2_FAKTOR_GAS_KG_KWH,
@@ -575,20 +576,13 @@ async def get_cockpit_uebersicht(
         return _tarif_cache[stichtag]
 
     netzbezug_kosten = 0.0
-    # #326: EV-/BKW-Ersparnis pro Monat mit dem Monats-Flexpreis (Σ EV_m × p_m),
-    # symmetrisch zu Auswertungen→Finanzen — kein netzbezug-gewichteter Ø-Preis mehr.
-    ev_ersparnis_sum = 0.0
-    bkw_ersparnis_sum = 0.0
     # PV-Quelle pro Monat wie beim Aggregat wählen (IMD bevorzugt, sonst Zähler).
     use_inv_pv = pv_erzeugung_inv > 0
-    einspeise_erloes_sum = 0.0
-    # §51 EEG: nicht vergüteter Erlös + zugehörige kWh, monatlich aus dem
-    # Tages-Aggregat `TagesZusammenfassung.einspeisung_neg_preis_kwh`
-    # gespeist. Wenn KEIN Monat Tages-Aggregate hat, bleibt es `None` und
-    # signalisiert dem Frontend „keine Strompreis-Mitschrift gepflegt".
-    nicht_vergueteter_erloes_sum = 0.0
-    nicht_verguetete_kwh_sum = 0.0
-    hat_neg_preis_daten = False
+    # #326: Finanz-Aggregation (Einspeise-Erlös §51 + EV-/BKW-Ersparnis) über den
+    # SoT-Helper `berechne_finanz_aggregat` — per-Monat mit dem Monats-Flexpreis
+    # (Σ EV_m × p_m), deckungsgleich mit Jahresbericht-PDF, HA-Export und
+    # Auswertungen→Finanzen. Kein netzbezug-gewichteter Ø-Preis mehr.
+    finanz_zeilen: list[FinanzMonatsZeile] = []
 
     # PV-Window-gefiltert (md_pv): Einspeise-Erlös, Netzbezugskosten und die
     # per-Monat-EV-/BKW-Ersparnis zählen nur Monate mit aktiver PV — wie die
@@ -603,38 +597,33 @@ async def get_cockpit_uebersicht(
         kwh = m.netzbezug_kwh or 0
         netzbezug_kosten += kwh * eff_preis / 100 + m_grundpreis
 
-        # #326: Monats-Eigenverbrauch über denselben SoT-Helper wie das Aggregat,
-        # multipliziert mit dem Monats-Flexpreis. Σ ergibt die EV-Ersparnis ohne
-        # den netzbezug-Gewichtungs-Drift.
         m_key = (m.jahr, m.monat)
         m_pv = pv_erzeugung_inv_by_ym.get(m_key, 0.0) if use_inv_pv else (m.pv_erzeugung_kwh or 0)
-        _kz_m = berechne_verbrauchs_kennzahlen(
-            pv_erzeugung_kwh=m_pv,
+        m_neg = await get_neg_preis_einspeisung_monat(db, anlage_id, m.jahr, m.monat)
+        finanz_zeilen.append(FinanzMonatsZeile(
             einspeisung_kwh=m.einspeisung_kwh or 0,
             netzbezug_kwh=kwh,
+            pv_erzeugung_kwh=m_pv,
             speicher_ladung_kwh=speicher_ladung_by_ym.get(m_key, 0.0),
             speicher_entladung_kwh=speicher_entladung_by_ym.get(m_key, 0.0),
             v2h_entladung_kwh=v2h_by_ym.get(m_key, 0.0),
-        )
-        ev_ersparnis_sum += _kz_m.eigenverbrauch_kwh * eff_preis / 100
-        bkw_ersparnis_sum += bkw_eigenverbrauch_by_ym.get(m_key, 0.0) * eff_preis / 100
-
-        m_neg = await get_neg_preis_einspeisung_monat(db, anlage_id, m.jahr, m.monat)
-        if m_neg is not None:
-            hat_neg_preis_daten = True
-        m_erloes = einspeise_erloes_euro(
-            einspeisung_kwh=m.einspeisung_kwh or 0,
+            bkw_eigenverbrauch_kwh=bkw_eigenverbrauch_by_ym.get(m_key, 0.0),
+            netzbezug_preis_cent=eff_preis,
+            einspeiseverguetung_cent=m_einspeis_cent,
             neg_preis_kwh=m_neg,
-            verguetung_ct_kwh=m_einspeis_cent,
-        )
-        einspeise_erloes_sum += m_erloes.erloes_euro
-        nicht_vergueteter_erloes_sum += m_erloes.nicht_vergueteter_erloes_euro
-        nicht_verguetete_kwh_sum += m_erloes.nicht_verguetete_kwh
+        ))
 
-    einspeise_erloes = einspeise_erloes_sum
+    # §51 EEG: nicht vergüteter Erlös + zugehörige kWh kommen aus dem Aggregat;
+    # `hat_neg_preis_daten` bleibt False, wenn KEIN Monat Tages-Aggregate hat,
+    # und signalisiert dem Frontend „keine Strompreis-Mitschrift gepflegt".
+    _finanz = berechne_finanz_aggregat(finanz_zeilen)
+    einspeise_erloes = _finanz.einspeise_erloes_euro
     # #326: per-Monat summiert (Σ EV_m × flexpreis_m) statt Gesamt-EV × Ø-Preis —
     # deckungsgleich mit Auswertungen→Finanzen.
-    ev_ersparnis = ev_ersparnis_sum
+    ev_ersparnis = _finanz.ev_ersparnis_euro
+    nicht_vergueteter_erloes_sum = _finanz.nicht_vergueteter_erloes_euro
+    nicht_verguetete_kwh_sum = _finanz.nicht_verguetete_kwh
+    hat_neg_preis_daten = _finanz.hat_neg_preis_daten
     netto_ertrag = einspeise_erloes + ev_ersparnis
 
     PV_RELEVANTE_TYPEN = ["pv-module", "wechselrichter", "speicher", "wallbox", "balkonkraftwerk"]
@@ -687,7 +676,7 @@ async def get_cockpit_uebersicht(
         netto_ertrag -= ust_eigenverbrauch
 
     # #326: BKW-Ersparnis ebenfalls per-Monat (Σ BKW-EV_m × flexpreis_m).
-    bkw_ersparnis = bkw_ersparnis_sum
+    bkw_ersparnis = _finanz.bkw_ersparnis_euro
     sonstige_netto = sonstige_ertraege_gesamt - sonstige_ausgaben_gesamt
     # #326 (rilmor-mhrs): Die manuell gepflegten „Sonstige Erträge & Ausgaben"
     # gehören in den ANGEZEIGTEN Netto-Ertrag — exakt wie Auswertungen→Finanzen
