@@ -11,6 +11,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Cloud-Import: kein „Failed to fetch" mehr bei langen Zeiträumen (#328).** Der Datenabruf aus den Hersteller-Clouds lief als ein einziger langer Request — bei vielen Monaten (z. B. Anker SOLIX mit drei Datenbereichen pro Monat) brach der Browser bzw. das HA-Ingress nach einigen Minuten mit „Failed to fetch" ab, obwohl der Import im Hintergrund weiterlief. Der Abruf läuft jetzt als **Hintergrund-Job mit Status-Abfrage**: der Wizard zeigt „Abruf läuft im Hintergrund … (Xs)" mit Sekunden-Zähler und wartet zuverlässig auf das Ergebnis, egal wie lange es dauert. Gilt für **alle** Cloud-Provider.
 - **Anker SOLIX: robuster bei API-Drosselung (HTTP 429, #328).** Bei längeren Import-Zeiträumen (viele Monate × drei Datenbereiche) drosselt die Anker-Cloud gelegentlich (HTTP 429). Bisher wurde der betroffene Bereich/Monat dann übersprungen — jetzt wartet eedc gestaffelt (30 s, dann 60 s) und versucht es erneut, sodass keine Werte verloren gehen. Bleibt es dauerhaft bei 429, erscheint weiterhin die klare Hinweis-Meldung.
 
 ### Changed
