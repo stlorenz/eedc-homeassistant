@@ -74,8 +74,13 @@ map:
 backup_pre: "sqlite3 /data/eedc.db 'PRAGMA wal_checkpoint(TRUNCATE);'"
 
 # Netzwerk (nur intern via Ingress)
+# Port 8099 ist standardmäßig deaktiviert (null) — eedc läuft sicher über
+# Ingress. Nur freigeben, wer die eedc-Werte per REST-Sensor (rest:-Plattform
+# in der configuration.yaml) nach HA holen will; MQTT braucht keine Freigabe.
 ports:
   8099/tcp: null
+ports_description:
+  8099/tcp: "Nur für den REST-Export der eedc-Sensoren nach Home Assistant freigeben (z. B. 8099). Standardmäßig aus — für die normale Nutzung und den MQTT-Export nicht nötig."
 
 # Vorgebautes Image von GitHub Container Registry
 image: "ghcr.io/supernova1963/eedc-homeassistant-{arch}"

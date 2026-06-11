@@ -12,6 +12,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### Fixed
 
 - **Anlagen-/Jahresbericht (PDF): „Sonstige Erträge & Ausgaben" durchgängig (#326-Folge, rilmor-mhrs).** Cockpit und Auswertung berücksichtigten die manuell gepflegten sonstigen Positionen bereits, der PDF-Bericht aber nur unvollständig: die Monats-Ertragsspalte rechnete sie nicht ein, weshalb ein per saldo negativer Monat (z. B. größere Sonderausgabe im Dezember) positiv erschien und die Monatszeilen sich **nicht** auf den ausgewiesenen Jahres-Netto-Ertrag summierten. Jetzt steckt die Sonstige-Position pro Monat in der jeweiligen Ertragszeile (richtige Monatszuordnung, negative Monate werden negativ) und die Finanz-Übersicht weist „Sonstige Erträge/Ausgaben" als eigene Zeile aus, sofern vorhanden. Symmetrie-Test erweitert: Σ Monats-Netto == Summary-Netto inkl. Sonstiger.
+- **Add-on: Port 8099 klar beschriftet (`ports_description`, rapahl).** Der Port für den optionalen REST-Export erschien in den Add-on-Netzwerkeinstellungen nur unbeschriftet als „8099/tcp" (und erst nach „Deaktivierte Ports einblenden"). Er trägt jetzt eine Beschreibung, die erklärt, dass er ausschließlich für den REST-Sensor-Export nach HA nötig ist und für die normale Nutzung bzw. den MQTT-Export aus bleiben kann. Default unverändert deaktiviert (sichere Ingress-Nutzung).
 
 ### Intern (nicht anwender-sichtbar)
 
