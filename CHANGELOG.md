@@ -9,6 +9,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+---
+
+## [3.43.0] - 2026-06-11 — HA-Export-Feinschliff, Cloud-Import ohne Timeout & Anker-SOLIX bestätigt
+
+> ✨ **Minor / Feature + Fixes.** Drei Stränge: Der **HA-Export** wird nach rapahls MQTT-Gegencheck präziser (echter Rest-Prognosewert + neuer rollender Tageswert, „Günstige Stunden" mit echter Preis-Schwelle statt konstant 10, spezifischer Ertrag aufs Jahr normiert). Der **Cloud-Import** läuft jetzt als Hintergrund-Job und bricht bei langen Zeiträumen nicht mehr mit „Failed to fetch" ab (alle Provider). Und **Anker SOLIX** ist nach Johnnys Gegentest bestätigt (Netzbezug/Batterie korrekt, robust gegen API-Drosselung, nicht mehr „in Erprobung"). 1017 Backend-Tests grün.
+
 ### Added
 
 - **HA-Export: „PV-Prognose heute" + echter Rest-Wert (rapahl-PN).** Der Sensor „PV-Prognose Rest heute" enthielt das bisherige IST und war damit faktisch der Tageswert unter irreführendem Namen („Rest 67 kWh um 11 Uhr"). Jetzt liefert er nur noch die **Prognose der verbleibenden Stunden** (Steuerungswert: wie viel PV kommt noch), und ein neuer Sensor **„PV-Prognose heute"** zeigt den rollenden Tageswert (IST bisher + Rest — läuft mit dem IST mit, wie seinerzeit besprochen). Das Stundenprofil-Attribut hängt jetzt am Tageswert-Sensor.
