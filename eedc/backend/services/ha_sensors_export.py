@@ -458,7 +458,7 @@ PREIS_SENSOREN = [
         unit="",
         icon="mdi:sort-numeric-ascending",
         category=SensorCategory.PREIS,
-        formel="Rang der aktuellen Stunde je Tag-/Nacht-Fenster (1=billigste … 5, 99=teuer/Rest); günstig nur ≥10 % unter Ø ohne 3 Peaks",
+        formel="Rang der aktuellen Stunde je Tag-/Nacht-Fenster (1=billigste … 5, 99=teuer/Rest); günstig nur unter der Günstig-Schwelle (Standard 10 % unter Ø ohne 3 Peaks, je Anlage einstellbar)",
         state_class="measurement",
     ),
     SensorDefinition(
@@ -467,7 +467,7 @@ PREIS_SENSOREN = [
         unit="",
         icon="mdi:counter",
         category=SensorCategory.PREIS,
-        formel="Anzahl günstiger Stunden heute (Rang 1–5 UND ≥10 % unter Ø ohne 3 Peaks)",
+        formel="Anzahl günstiger Stunden heute (Rang 1–5 UND unter der Günstig-Schwelle, je Anlage einstellbar)",
         state_class="measurement",
     ),
     SensorDefinition(
