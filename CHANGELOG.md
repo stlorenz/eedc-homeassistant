@@ -9,6 +9,10 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dokumente: leere Infothek lässt den ZIP-Download nicht mehr komplett scheitern (Dirk, PV-Forum).** Wer alle Berichte fürs ZIP ankreuzte, aber keine Infothek-Einträge gepflegt hat, bekam einen Komplett-Fehler („Infothek-Dossier: ValueError: Keine Einträge zum Exportieren") — und gar kein ZIP. Jetzt wird die Infothek-Dossier-Karte bei leerer Infothek **deaktiviert angezeigt** (mit Hinweis, wo Einträge gepflegt werden) und ist weder einzeln noch fürs ZIP wählbar — die übrigen Berichte laden normal. Direkte API-Aufrufe erhalten statt des rohen Fehlers eine verständliche Meldung; echte Render-Fehler brechen das ZIP weiterhin bewusst komplett ab (kein halbes ZIP).
+
 ### Added
 
 - **HA-Export: Günstig-Schwelle pro Anlage einstellbar (rapahl-PN-Folge).** Der Prozentsatz unter dem Tagesdurchschnitt, ab dem eine Stunde als „günstig" gilt, lässt sich jetzt auf der MQTT-Export-Seite je Anlage festlegen (0–50 %, Standard 10 %) — wer z. B. mit Ø×0,925 plant, trägt 7,5 % ein und steuert damit Anzahl der günstigen Stunden und die eigene Ladeverlust-Abwägung selbst. Wirkt auf Börsenpreis-Rang und alle drei Günstige-Stunden-Sensoren; die Lade-/Entlade-Strategie bleibt bewusst beim Nutzer in HA.
