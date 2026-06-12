@@ -9,6 +9,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+---
+
+## [3.44.0] - 2026-06-12 — Einstellbare Günstig-Schwelle, Mehrtages-Prognose mit Korrekturprofil & Stundenprofile
+
+> ✨ **Minor / Feature + Fixes.** Das Abschluss-Release der HA-Export-Runde: Die **Günstig-Schwelle** der Börsenpreis-Sensoren ist pro Anlage einstellbar, die **Mehrtages-Prognose** (morgen/übermorgen/Tag+3) korrigiert OpenMeteo jetzt pro Stunde über die gelernte Korrekturprofil-Kaskade — HA-Export und Prognosen-Vergleich zeigen denselben Wert —, alle vier Prognose-Sensoren tragen ihr **Stundenprofil als Attribut** (Tageswert == Σ Stunden, garantiert), und die Status-Sensoren wandern in den **Diagnose-Bereich**. Dazu: der Dokumente-ZIP scheitert nicht mehr an einer leeren Infothek (Dirk), und die Export-Sensoren sind erstmals vollständig in der Hilfe dokumentiert. 1030 Backend-Tests grün.
+
 ### Fixed
 
 - **Dokumente: leere Infothek lässt den ZIP-Download nicht mehr komplett scheitern (Dirk, PV-Forum).** Wer alle Berichte fürs ZIP ankreuzte, aber keine Infothek-Einträge gepflegt hat, bekam einen Komplett-Fehler („Infothek-Dossier: ValueError: Keine Einträge zum Exportieren") — und gar kein ZIP. Jetzt wird die Infothek-Dossier-Karte bei leerer Infothek **deaktiviert angezeigt** (mit Hinweis, wo Einträge gepflegt werden) und ist weder einzeln noch fürs ZIP wählbar — die übrigen Berichte laden normal. Direkte API-Aufrufe erhalten statt des rohen Fehlers eine verständliche Meldung; echte Render-Fehler brechen das ZIP weiterhin bewusst komplett ab (kein halbes ZIP).
